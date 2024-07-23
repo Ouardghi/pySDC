@@ -1,0 +1,18 @@
+---
+
+name: pySDC
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - numpy
+  - scipy>=0.17.1
+  - sympy>=1.0
+  - pytorch
+  - matplotlib>=3.0
+  - dill
+  - mpich
+  - mpi4py>=3.0.0
+  - pip
+  - pip:
+    - qmat>=0.1.8

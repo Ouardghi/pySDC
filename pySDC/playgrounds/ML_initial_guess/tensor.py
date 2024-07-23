@@ -1,12 +1,6 @@
-import numpy as np
 import torch
 
-from pySDC.core.Errors import DataError
-
 try:
-    # TODO : mpi4py cannot be imported before dolfin when using fenics mesh
-    # see https://github.com/Parallel-in-Time/pySDC/pull/285#discussion_r1145850590
-    # This should be dealt with at some point
     from mpi4py import MPI
 except ImportError:
     MPI = None
@@ -15,18 +9,21 @@ except ImportError:
 class Tensor(torch.Tensor):
     """
     Wrapper for PyTorch tensor.
-    Be aware that this is totally WIP! Should be fine to count iterations, but desperately needs cleaning up if this project goes much further!
+    Be aware that this is totally WIP! Should be fine to count iterations, but desperately needs cleaning up if this
+    project goes much further!
 
     TODO: Have to update `torch/multiprocessing/reductions.py` in order to share this datatype across processes.
 
     Attributes:
-        _comm: MPI communicator or None
+        comm: MPI communicator or None
     """
+
+    comm = None
 
     @staticmethod
     def __new__(cls, init, val=0.0, *args, **kwargs):
         """
-        Instantiates new datatype. This ensures that even when manipulating data, the result is still a mesh.
+        Instantiates new datatype. This ensures that even when manipulating data, the result is still a tensor.
 
         Args:
             init: either another mesh or a tuple containing the dimensions, the communicator and the dtype
@@ -36,36 +33,25 @@ class Tensor(torch.Tensor):
             obj of type mesh
 
         """
-        if isinstance(init, Tensor):
-            obj = super().__new__(cls, init)
+        # TODO: The cloning of tensors going in is likely slow
+
+        if isinstance(init, torch.Tensor):
+            obj = super().__new__(cls, init.clone())
             obj[:] = init[:]
-            obj._comm = init._comm
         elif (
             isinstance(init, tuple)
-            # and (init[1] is None or isinstance(init[1], MPI.Intracomm))
+            and (init[1] is None or isinstance(init[1], MPI.Intracomm))
             # and isinstance(init[2], np.dtype)
         ):
-            obj = super().__new__(cls, init[0].clone())
+            if isinstance(init[0][0], torch.Tensor):
+                obj = super().__new__(cls, init[0].clone())
+            else:
+                obj = super().__new__(cls, *init[0])
             obj.fill_(val)
-            obj._comm = init[1]
+            cls.comm = init[1]
         else:
             raise NotImplementedError(type(init))
         return obj
-
-    @property
-    def comm(self):
-        """
-        Getter for the communicator
-        """
-        return self._comm
-
-    def __array_finalize__(self, obj):
-        """
-        Finalizing the datatype. Without this, new datatypes do not 'inherit' the communicator.
-        """
-        if obj is None:
-            return
-        self._comm = getattr(obj, '_comm', None)
 
     def __abs__(self):
         """

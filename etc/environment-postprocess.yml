@@ -1,0 +1,21 @@
+---
+
+name: pySDC
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - coverage[toml]
+  - sphinx
+  - numpy
+  - scipy
+  - matplotlib
+  - dill
+  - numba
+  - cupy
+  - pip
+  - pip:
+    - sphinxemoji
+    - m2r2
+    - genbadge[all]
+    - qmat>=0.1.8

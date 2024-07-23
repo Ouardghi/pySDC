@@ -8,12 +8,12 @@ from pySDC.projects.PinTSimE.battery_model import runSimulation
 
 import pySDC.helpers.plot_helper as plt_helper
 
-from pySDC.core.Hooks import hooks
+from pySDC.core.hooks import Hooks
 from pySDC.implementations.hooks.log_errors import LogGlobalErrorPostStep
 from pySDC.implementations.hooks.log_solution import LogSolution
 
 
-class LogEventDiscontinuousTestODE(hooks):
+class LogEventDiscontinuousTestODE(Hooks):
     """
     Logs the problem dependent state function of the discontinuous test ODE.
     """
@@ -68,8 +68,9 @@ def main():
         'max_restarts': 50,
         'recomputed': False,
         'tol_event': 1e-12,
-        'alpha': 1.0,
+        'alpha': 0.96,
         'exact_event_time_avail': True,
+        'typeFD': 'backward',
     }
 
     # ---- all parameters are stored in this dictionary ----
