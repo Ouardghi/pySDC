@@ -198,7 +198,7 @@ class fully_implicit_DAE(generic_implicit):
         for m in range(self.coll.num_nodes):
             # use abs function from data type here
             res_norm.append(abs(P.eval_f(L.u[m + 1], L.f[m + 1], L.time + L.dt * self.coll.nodes[m])))
-
+            
         # find maximal residual over the nodes
         if L.params.residual_type == 'full_abs':
             L.status.residual = max(res_norm)
