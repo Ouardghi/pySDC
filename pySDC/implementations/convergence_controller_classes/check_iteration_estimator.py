@@ -1,12 +1,12 @@
 import numpy as np
-from pySDC.core.ConvergenceController import ConvergenceController, Status
+from pySDC.core.convergence_controller import ConvergenceController, Status
 from pySDC.implementations.convergence_controller_classes.store_uold import StoreUOld
 
 
 class CheckIterationEstimatorNonMPI(ConvergenceController):
     def __init__(self, controller, params, description, **kwargs):
         """
-        Initalization routine
+        Initialization routine
 
         Args:
             controller (pySDC.Controller): The controller

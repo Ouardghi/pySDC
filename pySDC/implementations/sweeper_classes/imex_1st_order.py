@@ -1,9 +1,9 @@
 import numpy as np
 
-from pySDC.core.Sweeper import sweeper
+from pySDC.core.sweeper import Sweeper
 
 
-class imex_1st_order(sweeper):
+class imex_1st_order(Sweeper):
     """
     Custom sweeper class, implements Sweeper.py
 
@@ -31,8 +31,8 @@ class imex_1st_order(sweeper):
         super().__init__(params)
 
         # IMEX integration matrices
-        self.QI = self.get_Qdelta_implicit(coll=self.coll, qd_type=self.params.QI)
-        self.QE = self.get_Qdelta_explicit(coll=self.coll, qd_type=self.params.QE)
+        self.QI = self.get_Qdelta_implicit(qd_type=self.params.QI)
+        self.QE = self.get_Qdelta_explicit(qd_type=self.params.QE)
 
     def integrate(self):
         """
@@ -42,16 +42,14 @@ class imex_1st_order(sweeper):
             list of dtype_u: containing the integral as values
         """
 
-        # get current level and problem description
         L = self.level
+        P = L.prob
 
         me = []
-
         # integrate RHS over all collocation nodes
         for m in range(1, self.coll.num_nodes + 1):
-            me.append(L.dt * self.coll.Qmat[m, 1] * (L.f[1].impl + L.f[1].expl))
-            # new instance of dtype_u, initialize values with 0
-            for j in range(2, self.coll.num_nodes + 1):
+            me.append(P.dtype_u(P.init, val=0.0))
+            for j in range(1, self.coll.num_nodes + 1):
                 me[m - 1] += L.dt * self.coll.Qmat[m, j] * (L.f[j].impl + L.f[j].expl)
 
         return me

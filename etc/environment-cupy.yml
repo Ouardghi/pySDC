@@ -1,3 +1,5 @@
+---
+
 name: pySDC
 channels:
   - conda-forge
@@ -7,8 +9,7 @@ dependencies:
   - scipy>=0.17.1
   - matplotlib>=3.0
   - dill>=0.2.6
-  - pytest
-  - pytest-cov
-  - pytest-timeout
-  - pytest-order
   - cupy
+  - pip
+  - pip:
+    - qmat>=0.1.8

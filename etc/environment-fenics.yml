@@ -1,3 +1,5 @@
+---
+
 name: pySDC
 channels:
   - conda-forge
@@ -9,7 +11,6 @@ dependencies:
   - dill>=0.2.6
   - fenics>=2019.1.0
   - mpi4py<=3.1.4
-  - pytest
-  - pytest-cov
-  - pytest-timeout
-  - pytest-order
+  - pip
+  - pip:
+    - qmat>=0.1.8
