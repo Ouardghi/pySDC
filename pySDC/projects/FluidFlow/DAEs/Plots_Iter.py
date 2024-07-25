@@ -1,7 +1,15 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
+import dolfin as df
 
+
+df.info(df.LinearVariationalSolver.default_parameters(), True)
+
+df.list_linear_solver_methods()
+df.list_krylov_solver_preconditioners()
+
+exit()
 
 def addlabels4(x,y):
     for i in range(len(x)):

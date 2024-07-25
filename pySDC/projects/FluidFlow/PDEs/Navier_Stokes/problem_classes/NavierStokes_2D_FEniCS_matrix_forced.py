@@ -6,12 +6,12 @@ from mshr import*
 
 import matplotlib.pyplot as plt 
 
-from pySDC.core.Problem import ptype
+from pySDC.core.problem import Problem
 from pySDC.implementations.datatype_classes.fenics_mesh import fenics_mesh, rhs_fenics_mesh
 
 
 # noinspection PyUnusedLocal
-class fenics_NSE_2D(ptype):
+class fenics_NSE_2D(Problem):
     r"""
     Example implementing the forced one-dimensional heat equation with Dirichlet boundary conditions
 

@@ -1,7 +1,7 @@
 import numpy as np
 from scipy import optimize
 
-from pySDC.core.Errors import ParameterError
+from pySDC.core.errors import ParameterError
 from pySDC.implementations.sweeper_classes.generic_implicit import generic_implicit
 from pySDC.projects.DAE.misc.DAEMesh import DAEMesh
 
@@ -63,7 +63,7 @@ class fully_implicit_DAE(generic_implicit):
         if self.coll.left_is_node:
             raise ParameterError(msg)
 
-        self.QI = self.get_Qdelta_implicit(coll=self.coll, qd_type=self.params.QI)
+        self.QI = self.get_Qdelta_implicit(qd_type=self.params.QI)
 
     def update_nodes(self):
         r"""
@@ -77,7 +77,6 @@ class fully_implicit_DAE(generic_implicit):
         assert L.status.unlocked
 
         M = self.coll.num_nodes
-        u_0 = L.u[0]
 
         # get QU^k where U = u'
         integral = self.integrate()
@@ -85,7 +84,7 @@ class fully_implicit_DAE(generic_implicit):
         for m in range(1, M + 1):
             for j in range(1, M + 1):
                 integral[m - 1] -= L.dt * self.QI[m, j] * L.f[j]
-            integral[m - 1] += u_0
+            integral[m - 1] += L.u[0]
 
         # do the sweep
         for m in range(1, M + 1):
@@ -103,7 +102,7 @@ class fully_implicit_DAE(generic_implicit):
         L.uold = L.u.copy()
         integral = self.integrate()
         for m in range(M):
-            L.u[m + 1] = u_0 + integral[m]            
+            L.u[m + 1] = L.u[0] + integral[m]            
 
         # indicate presence of new values at this level
         L.status.updated = True
@@ -176,7 +175,7 @@ class fully_implicit_DAE(generic_implicit):
         for m in range(self.coll.num_nodes):
             # use abs function from data type here
             
-            """
+            
             res = P.eval_f(L.u[m + 1], L.f[m + 1], L.time + L.dt * self.coll.nodes[m])
             res_norm.append(abs(res))
             """       
@@ -186,7 +185,7 @@ class fully_implicit_DAE(generic_implicit):
                res_norm.append(abs(res))
             else:
                res_norm.append(1.0)
-         
+            """
         
         # find maximal residual over the nodes
         if L.params.residual_type == 'full_abs':
@@ -203,8 +202,8 @@ class fully_implicit_DAE(generic_implicit):
                 f'full_abs, last_abs, full_rel or last_rel instead'
             )
             
-        #if L.time == 0.0 and  L.status.residual == 0.0:
-        #   L.status.residual = 1.0
+        if L.time == 0.0 and  L.status.residual == 0.0:
+           L.status.residual = 1.0
 
         # indicate that the residual has seen the new values
         L.status.updated = False

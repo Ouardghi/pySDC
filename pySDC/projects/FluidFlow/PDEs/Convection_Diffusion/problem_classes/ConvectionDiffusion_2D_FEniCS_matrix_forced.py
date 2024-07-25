@@ -4,12 +4,12 @@ import dolfin as df
 import numpy as np
 from mshr import*
  
-from pySDC.core.Problem import ptype
+from pySDC.core.problem import Problem
 from pySDC.implementations.datatype_classes.fenics_mesh import fenics_mesh, rhs_fenics_mesh
 
 
 # noinspection PyUnusedLocal
-class fenics_ConvDiff2D(ptype):
+class fenics_ConvDiff2D(Problem):
     r"""    
     This example demonstrates the implementation of a forced two-dimensional convection-diffusion equation using 
     Dirichlet boundary conditions. The problem considered is a benchmark test with a rotating Gaussian profile.    

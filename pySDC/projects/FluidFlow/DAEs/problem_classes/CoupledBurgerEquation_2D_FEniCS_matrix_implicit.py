@@ -232,25 +232,7 @@ class fenics_heat(Problem):
         """
         self.g.t=t
         f = self.dtype_f(self.V)
-
-
-       
-        """   
-        # Diffusive part
-        diff = self.dtype_u(df.project(self.nu*df.div(df.nabla_grad(u.values)), self.V) , val=self.V)        
         
-        # Convective part  
-        conv = self.dtype_u(df.project(df.dot(u.values, df.nabla_grad(u.values)),self.V), val=self.V)
-        
-        # External forces 
-        frc = self.dtype_f(df.interpolate(self.g, self.V), val=self.V)    
-    
-        f = du - diff + conv  - frc
-        fm = self.apply_mass_matrix(f)
-
-        
-
-        """
         # Diffusive part      
         diff = -df.inner(self.nu*df.nabla_grad(u.values), df.nabla_grad(self.v))*df.dx
         

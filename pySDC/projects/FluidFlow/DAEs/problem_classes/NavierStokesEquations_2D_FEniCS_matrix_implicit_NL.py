@@ -4,16 +4,11 @@ from math import degrees
 import dolfin as df
 import numpy as np
 
-from pySDC.core.Problem import ptype
+from pySDC.core.problem import Problem
 from pySDC.implementations.datatype_classes.fenics_mesh import fenics_mesh, rhs_fenics_mesh
 
-import dolfin as df
-import matplotlib.pyplot as plt 
-import matplotlib.cm as cm
-from mpl_toolkits.mplot3d import Axes3D
-
 # noinspection PyUnusedLocal
-class fenics_NSE_monolithic(ptype):
+class fenics_NSE_monolithic(Problem):
     r"""
     Example implementing the forced two-dimensional Navier-Stokes equations with Dirichlet boundary conditions
 
@@ -85,6 +80,7 @@ class fenics_NSE_monolithic(ptype):
     dtype_f = fenics_mesh
     #dtype_f = rhs_fenics_mesh
     df.set_log_active(False)
+    #df.set_log_level(20)
     def __init__(self, c_nvars=128, t0=0.0, family='CG', order=2, refinements=1, nu=0.1, c=0.0):
         """Initialization routine"""
         self.fix_bc_for_residual = True
@@ -200,31 +196,44 @@ class fenics_NSE_monolithic(ptype):
         """
 
         w = self.dtype_u(u0)
-        u,p = df.split(w.values)
+        #u,p = df.split(w.values)
+        
+        u = self.u
+        p = self.p
 
-        uapp, papp = df.split(rhs.values) 
+        uapp, papp = df.split(df.project(rhs.values,self.W)) 
         uold, pold = df.split(self.wold)
-
+        
         # update time in Boundary conditions         
         self.du_in.t=t
 
         # Get the forcing term 
         self.g.t=t
         G0 = self.dtype_f(df.interpolate(self.g, self.V), val=self.V) 
-        
-        F  = df.inner(u, self.v )* df.dx 
-        F += factor*df.inner(df.dot(u, df.nabla_grad(uold)), self.v) * df.dx + df.inner(df.dot(uapp, df.nabla_grad(uold)), self.v) * df.dx
-        F += factor*df.inner(df.dot(uold, df.nabla_grad(u)), self.v) * df.dx + df.inner(df.dot(uold, df.nabla_grad(uapp)), self.v) * df.dx
-        F += -1.0*df.inner(df.dot(uold, df.nabla_grad(uold)), self.v) * df.dx
+
+        F  = df.dot(u, self.v )* df.dx 
+        F += factor*df.dot(df.dot(u, df.nabla_grad(uold)), self.v) * df.dx 
+        F += df.dot(df.dot(uapp, df.nabla_grad(uold)), self.v) * df.dx
+        F += factor*df.dot(df.dot(uold, df.nabla_grad(u)), self.v) * df.dx 
+        F += df.dot(df.dot(uold, df.nabla_grad(uapp)), self.v) * df.dx
+        F -= df.dot(df.dot(uold, df.nabla_grad(uold)), self.v) * df.dx
         F += self.nu*factor*df.inner(df.nabla_grad(u), df.nabla_grad(self.v)) * df.dx
         F += self.nu*df.inner(df.nabla_grad(uapp), df.nabla_grad(self.v)) * df.dx
-        F += df.inner(G0.values, self.v) * df.dx                                       
-        F += -1.0*df.inner(p,df.div(self.v))*df.dx
-        F += -1.0*factor*df.inner(df.div(u),self.q)*df.dx
-        F += -1.0*df.inner(df.div(uapp),self.q)*df.dx
+        F += df.dot(G0.values, self.v) * df.dx                                       
+        F -= df.dot(p,df.div(self.v))*df.dx
+        F -= factor*df.dot(df.div(u),self.q)*df.dx
+        F -= df.dot(df.div(uapp),self.q)*df.dx
         
-        df.solve(F==0, w.values,self.bcdu)
+        L = df.lhs(F)
+        R = df.rhs(F) 
 
+        #A = df.assemble(L)
+        #b = df.assemble(R)
+        
+        #[bc.apply(A,b) for bc in self.bcdu]
+
+        #df.solve(A, w.values.vector(), b,'umfpack')
+        df.solve(L==R, w.values,self.bcdu)#, solver_parameters={'linear_solver': 'petsc','preconditioner': 'ilu'})
         return w
     
     def eval_f(self, u, du, t):
@@ -249,28 +258,7 @@ class fenics_NSE_monolithic(ptype):
 
         self.g.t=t
         f = self.dtype_f(self.W)
-        
-        """
-        # Diffusive part
-        diff = self.dtype_u(df.project(self.nu*df.div(df.nabla_grad(u1)), self.V) , val=self.V)
-
-        # Convective part  
-        conv = self.dtype_u(df.project(df.dot(u1, df.nabla_grad(u1)),self.V), val=self.V)
-
-        # Pressure gradient 
-        grad = self.dtype_u(df.project(df.nabla_grad(p), self.V) , val=self.V)
-
-        # External forces 
-        frc = self.dtype_f(df.interpolate(self.g, self.V), val=self.V)
-        
-        # Du/Dt
-        
-        ut = self.dtype_u(df.project(du1,self.V), val=self.V) 
-
-        f = ut + conv + grad - diff - frc
-        self.bc_hom.apply(f.values.vector())
-        """
-
+    
         # Diffusive part      
         diff = -df.inner(self.nu*df.nabla_grad(u1), df.nabla_grad(self.v))*df.dx
         

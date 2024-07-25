@@ -6,12 +6,12 @@ from mshr import*
 
 import matplotlib.pyplot as plt 
 
-from pySDC.core.Problem import ptype
+from pySDC.core.problem import Problem 
 from pySDC.implementations.datatype_classes.fenics_mesh import fenics_mesh, rhs_fenics_mesh
 
 
 # noinspection PyUnusedLocal
-class fenics_Burger2D(ptype):
+class fenics_Burger2D(Problem):
     r"""
     This example demonstrates the implementation of a forced two-dimensional convection-diffusion equation using 
     Dirichlet boundary conditions. The problem considered is the coupled viscous Burger's equations.    

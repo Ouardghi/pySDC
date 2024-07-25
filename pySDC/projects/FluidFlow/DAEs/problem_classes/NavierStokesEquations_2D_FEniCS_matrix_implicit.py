@@ -4,7 +4,7 @@ from math import degrees
 import dolfin as df
 import numpy as np
 
-from pySDC.core.Problem import ptype
+from pySDC.core.problem import Problem
 from pySDC.implementations.datatype_classes.fenics_mesh import fenics_mesh, rhs_fenics_mesh
 
 import dolfin as df
@@ -13,7 +13,7 @@ import matplotlib.cm as cm
 from mpl_toolkits.mplot3d import Axes3D
 
 # noinspection PyUnusedLocal
-class fenics_NSE_monolithic(ptype):
+class fenics_NSE_monolithic(Problem):
     r"""
     Example implementing the forced two-dimensional Navier-Stokes equations with Dirichlet boundary conditions
 
@@ -163,6 +163,11 @@ class fenics_NSE_monolithic(ptype):
 
         # Homogen boundary conditions for the residual
         self.bc_hom = df.DirichletBC(self.V, df.Constant((0,0)), Boundary)
+        
+        bc_hom_u = df.DirichletBC(self.W.sub(0), df.Constant((0,0)), Boundary)
+        bc_hom_p = df.DirichletBC(self.W.sub(1), df.Constant(0), Boundary)
+        
+        self.bc_hom2 = [bc_hom_u, bc_hom_p]
 
         # set forcing term as expression
         self.g = df.Expression(('0','0'), a=np.pi, b=self.nu, t=self.t0, degree=self.order)
@@ -220,7 +225,7 @@ class fenics_NSE_monolithic(ptype):
         F += -1.0*df.inner(df.div(uapp),self.q)*df.dx
 
         #df.solve(R==L,u.values,self.bc)
-        df.solve(F==0, w.values,self.bcdu, solver_parameters={"newton_solver":{"relative_tolerance": 1e-10}})
+        df.solve(F==0, w.values,self.bcdu, solver_parameters={"newton_solver":{"absolute_tolerance": 1e-15}})
 
         return w
 
@@ -245,33 +250,32 @@ class fenics_NSE_monolithic(ptype):
         du1, p = df.split(du.values) 
 
         self.g.t=t
-        f = self.dtype_f(self.V)
+        f = self.dtype_f(self.W)
+       
+        # Diffusive part      
+        diff = -df.inner(self.nu*df.nabla_grad(u1), df.nabla_grad(self.v))*df.dx
         
-        # Diffusive part
-        diff = self.dtype_u(df.project(self.nu*df.div(df.nabla_grad(u1)), self.V) , val=self.V)
-
         # Convective part  
-        conv = self.dtype_u(df.project(df.dot(u1, df.nabla_grad(u1)),self.V), val=self.V)
-
-        # Pressure gradient 
-        grad = self.dtype_u(df.project(df.nabla_grad(p), self.V) , val=self.V)
-
+        conv = df.inner(df.dot(u1, df.nabla_grad(u1)), self.v)*df.dx
+         
         # External forces 
-        frc = self.dtype_f(df.interpolate(self.g, self.V), val=self.V)
+        frc = df.inner(df.interpolate(self.g, self.V),self.v)*df.dx
         
-        # Du/Dt
+        # Pressure gradient 
+        grad =  df.inner(p,df.div(self.v))*df.dx
         
-        ut = self.dtype_u(df.project(du1,self.V), val=self.V) 
+        # incompressibility constraint 
+        incom =  df.inner(df.div(u1),self.q)*df.dx
 
-        f = ut + conv + grad - diff - frc
-        self.bc_hom.apply(f.values.vector())
+        # Time derivative 
+        dudt = df.inner(du1, self.v)*df.dx
         
-        """
-        df.plot(f.values)
-        plt.draw()
-        plt.pause(0.0001)
-        plt.show()
-        """
+        g = dudt - diff + conv - grad - frc - incom 
+
+        f.values.vector()[:] = df.assemble(g)[:]
+
+        [bc.apply(f.values.vector()) for bc in self.bc_hom2]
+
 
         return f #self.apply_mass_matrix(f)
         
