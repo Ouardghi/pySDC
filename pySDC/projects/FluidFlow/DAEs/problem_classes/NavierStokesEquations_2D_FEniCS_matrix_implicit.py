@@ -145,7 +145,7 @@ class fenics_NSE_monolithic(Problem):
 
         # Prepare Dirichlet boundary conditions
         Uin  = '4.0*1.5*sin(pi*t/8)*x[1]*(0.41 - x[1]) / pow(0.41, 2)'
-        dUin =    '0.75*cos(pi*t/8)*x[1]*(0.41 - x[1]) / pow(0.41, 2)'
+        dUin =    '0.75*pi*cos(pi*t/8)*x[1]*(0.41 - x[1]) / pow(0.41, 2)'
         #
         self.u_in  = df.Expression((Uin,  '0'), pi=np.pi, t=t0, degree=self.order)
         self.du_in = df.Expression((dUin, '0'), pi=np.pi, t=t0, degree=self.order)
