@@ -2,9 +2,9 @@ import logging
 
 import dolfin as df
 import numpy as np
-from mshr import*
+from mshr import *
 
-import matplotlib.pyplot as plt 
+import matplotlib.pyplot as plt
 
 from pySDC.core.problem import Problem
 from pySDC.implementations.datatype_classes.fenics_mesh import fenics_mesh, rhs_fenics_mesh
@@ -19,9 +19,9 @@ class fenics_NSE_2D(Problem):
         \frac{d u}{d t} = \nu \frac{d^2 u}{d x^2} + f
 
     for :math:`x \in \Omega:=[0,1]`, where the forcing term :math:`f` is defined by
-    
-    
-    
+
+
+
 
     Parameters
     ----------
@@ -60,7 +60,7 @@ class fenics_NSE_2D(Problem):
     dtype_u = fenics_mesh
     dtype_f = rhs_fenics_mesh
 
-    def __init__(self, c_nvars=64, t0=0.0, family='CG', order=2, refinements=1, nu=0.001, c=0.0, sigma =0.05):
+    def __init__(self, c_nvars=64, t0=0.0, family='CG', order=2, refinements=1, nu=0.001, c=0.0, sigma=0.05):
         """Initialization routine"""
 
         # define the Dirichlet boundary
@@ -75,84 +75,77 @@ class fenics_NSE_2D(Problem):
         df.parameters["form_compiler"]["optimize"] = True
         df.parameters["form_compiler"]["cpp_optimize"] = True
         df.parameters['allow_extrapolation'] = True
-        
+
         # set mesh and refinement (for multilevel)
-        #domain = Rectangle(df.Point(0.0, 0.0), df.Point(1.0, 1.0))
-        #mesh = generate_mesh(domain, c_nvars)
-        
-        mesh = df.Mesh('cylinder.xml')        
-        
-        #for _ in range(refinements):
+        # domain = Rectangle(df.Point(0.0, 0.0), df.Point(1.0, 1.0))
+        # mesh = generate_mesh(domain, c_nvars)
+
+        mesh = df.Mesh('cylinder.xml')
+
+        # for _ in range(refinements):
         #    mesh = df.refine(mesh)
-        
+
         self.mesh = mesh
         n = df.FacetNormal(mesh)
-        
 
         # define function space for future reference
         self.V = df.VectorFunctionSpace(mesh, family, order)
-        self.Q = df.FunctionSpace(mesh, family, order-1)
-        
+        self.Q = df.FunctionSpace(mesh, family, order - 1)
+
         tmp = df.Function(self.V)
         print('DoFs on this level:', len(tmp.vector()[:]))
-        
-        
+
         # invoke super init, passing number of dofs, dtype_u and dtype_f
         super(fenics_NSE_2D, self).__init__(self.V)
         self._makeAttributeAndRegister(
             'c_nvars', 't0', 'family', 'order', 'refinements', 'nu', 'c', 'sigma', localVars=locals(), readOnly=True
         )
-        
+
         # Stiffness term (Laplace)
         u = df.TrialFunction(self.V)
         v = df.TestFunction(self.V)
-        
+
         self.u = u
         self.v = v
-        
+
         self.p = df.TrialFunction(self.Q)
         self.q = df.TestFunction(self.Q)
-        
-        a_K  = -1.0 * df.inner(df.nabla_grad(u), self.nu * df.nabla_grad(v)) * df.dx
-        a_M  = df.inner(u , v) * df.dx
-        a_S  = df.inner(df.nabla_grad(self.p),df.nabla_grad(self.q))*df.dx 
-        a_Mp = df.inner(self.p , self.q) * df.dx
-        
-        self.M  = df.assemble(a_M)
-        self.K  = df.assemble(a_K)
-        self.S  = df.assemble(a_S)
+
+        a_K = -1.0 * df.inner(df.nabla_grad(u), self.nu * df.nabla_grad(v)) * df.dx
+        a_M = df.inner(u, v) * df.dx
+        a_S = df.inner(df.nabla_grad(self.p), df.nabla_grad(self.q)) * df.dx
+        a_Mp = df.inner(self.p, self.q) * df.dx
+
+        self.M = df.assemble(a_M)
+        self.K = df.assemble(a_K)
+        self.S = df.assemble(a_S)
         self.Mp = df.assemble(a_Mp)
-        
+
         # set boundary values
-        self.bc = df.DirichletBC(self.V, df.Constant((0.0,0.0)), Boundary)
-        self.bc_hom = df.DirichletBC(self.V, df.Constant((0.0,0.0)), Boundary)
-        
-        
+        self.bc = df.DirichletBC(self.V, df.Constant((0.0, 0.0)), Boundary)
+        self.bc_hom = df.DirichletBC(self.V, df.Constant((0.0, 0.0)), Boundary)
+
         # Define inflow profile
         inflow_profile = ('4.0*1.5*x[1]*(0.41 - x[1]) / pow(0.41, 2)', '0')
 
-        # Define boundaries   
-        inflow   = 'near(x[0], 0)'
-        outflow  = 'near(x[0], 2.2)'
-        walls    = 'near(x[1], 0) || near(x[1], 0.41)'
+        # Define boundaries
+        inflow = 'near(x[0], 0)'
+        outflow = 'near(x[0], 2.2)'
+        walls = 'near(x[1], 0) || near(x[1], 0.41)'
         cylinder = 'on_boundary && x[0]>0.1 && x[0]<0.3 && x[1]>0.1 && x[1]<0.3'
 
         # Define boundary conditions
-        bcu_noslip   = df.DirichletBC(self.V, df.Constant((0, 0)), walls)
-        bcu_inflow   = df.DirichletBC(self.V, df.Expression(inflow_profile, degree=2), inflow)
-        bcu_cylinder = df.DirichletBC(self.V, df.Constant((0, 0)),cylinder)
-        bcp_outflow  = df.DirichletBC(self.Q, df.Constant(0), outflow)
+        bcu_noslip = df.DirichletBC(self.V, df.Constant((0, 0)), walls)
+        bcu_inflow = df.DirichletBC(self.V, df.Expression(inflow_profile, degree=2), inflow)
+        bcu_cylinder = df.DirichletBC(self.V, df.Constant((0, 0)), cylinder)
+        bcp_outflow = df.DirichletBC(self.Q, df.Constant(0), outflow)
 
-        self.bcu = [bcu_noslip,bcu_inflow,bcu_cylinder]
+        self.bcu = [bcu_noslip, bcu_inflow, bcu_cylinder]
         self.bcp = [bcp_outflow]
-        
-        
 
         # set forcing term as expression
-        self.g = df.Expression(('0.0','0.0'), t=self.t0, degree=self.order)
-        
-        
-        
+        self.g = df.Expression(('0.0', '0.0'), t=self.t0, degree=self.order)
+
     def solve_system(self, rhs, factor, u0, t):
         r"""
         Dolfin's linear solver for :math:`(M - factor \cdot A) \vec{u} = \vec{rhs}`.
@@ -180,7 +173,7 @@ class fenics_NSE_2D(Problem):
         T = self.M - factor * self.K
         self.bc.apply(T, b.values.vector())
         df.solve(T, u.values.vector(), b.values.vector())
-        
+
         return u
 
     def __eval_fexpl(self, u, t):
@@ -201,17 +194,17 @@ class fenics_NSE_2D(Problem):
         """
 
         self.g.t = t
-        fexpl1 = self.dtype_u(df.interpolate(self.g, self.V))       
+        fexpl1 = self.dtype_u(df.interpolate(self.g, self.V))
 
-        a_C = -1.0 * df.inner(df.dot(u.values, df.nabla_grad(u.values)), self.v) * df.dx    
+        a_C = -1.0 * df.inner(df.dot(u.values, df.nabla_grad(u.values)), self.v) * df.dx
         self.C = df.assemble(a_C)
-                
-        tmp = self.dtype_u(self.V) 
+
+        tmp = self.dtype_u(self.V)
         tmp.values.vector()[:] = self.C[:]
         fexpl2 = self.__invert_mass_matrix(tmp)
 
         fexpl = fexpl1 + fexpl2
-        
+
         return fexpl
 
     def __eval_fimpl(self, u, t):
@@ -319,13 +312,16 @@ class fenics_NSE_2D(Problem):
         """
 
         u0 = df.Expression(
-         ('0.75-1.0/(4.0*(1+exp(-((4*x[0]-4*x[1]+t)*Re)/32)))','0.75+1.0/(4.0*(1+exp(-((4*x[0]-4*x[1]+t)*Re)/32)))'),
-         Re=500,
-         t=t,
-         degree=self.order,
+            (
+                '0.75-1.0/(4.0*(1+exp(-((4*x[0]-4*x[1]+t)*Re)/32)))',
+                '0.75+1.0/(4.0*(1+exp(-((4*x[0]-4*x[1]+t)*Re)/32)))',
+            ),
+            Re=500,
+            t=t,
+            degree=self.order,
         )
-        
-        #u0 = df.Expression('sin(a*x[0]) * sin(a*x[1]) * cos(t) + c', c=self.c, a=np.pi, t=t, degree=self.order)
+
+        # u0 = df.Expression('sin(a*x[0]) * sin(a*x[1]) * cos(t) + c', c=self.c, a=np.pi, t=t, degree=self.order)
         me = self.dtype_u(df.interpolate(u0, self.V), val=self.V)
 
         return me
@@ -378,7 +374,7 @@ class fenics_NSE_2D_mass(fenics_NSE_2D):
         Wells and others. Springer (2012).
     """
 
-    def __init__(self, c_nvars=64, t0=0.0, family='CG', order=2, refinements=1, nu=0.001, c=0.0, sigma =0.05):
+    def __init__(self, c_nvars=64, t0=0.0, family='CG', order=2, refinements=1, nu=0.001, c=0.0, sigma=0.05):
         """Initialization routine"""
 
         super().__init__(c_nvars, t0, family, order, refinements, nu, c)
@@ -413,8 +409,7 @@ class fenics_NSE_2D_mass(fenics_NSE_2D):
         self.bc.apply(T, b.values.vector())
 
         df.solve(T, u.values.vector(), b.values.vector())
-        
-     
+
         return u
 
     def eval_f(self, u, t):
@@ -441,15 +436,14 @@ class fenics_NSE_2D_mass(fenics_NSE_2D):
         self.g.t = t
         fexpl1 = self.dtype_u(df.interpolate(self.g, self.V))
         fexpl1 = self.apply_mass_matrix(fexpl1)
-        
-        fexpl2 = self.dtype_u(df.project(-1.0*df.dot(u.values, df.nabla_grad(u.values)), self.V))
+
+        fexpl2 = self.dtype_u(df.project(-1.0 * df.dot(u.values, df.nabla_grad(u.values)), self.V))
         fexpl2 = self.apply_mass_matrix(fexpl2)
-        
-        f.expl  = fexpl1 + fexpl2 
-                
+
+        f.expl = fexpl1 + fexpl2
+
         return f
-        
-        
+
     def eval_gradP(self, p):
         """
         Routine to evaluate pressure gradient.
@@ -458,19 +452,19 @@ class fenics_NSE_2D_mass(fenics_NSE_2D):
         ----------
         p : Function space
             Current values of the numerical solution.
-            
+
         Returns
         -------
         f : dtype_f
             The right-hand side divided into two parts.
         """
-      
-        gradp0 = self.dtype_u(df.project(-1.0*df.nabla_grad(p), self.V))
-        gradp = self.apply_mass_matrix(gradp0)        
-        
-        #df.plot(gradp.values)
-        #plt.show()
-        
+
+        gradp0 = self.dtype_u(df.project(-1.0 * df.nabla_grad(p), self.V))
+        gradp = self.apply_mass_matrix(gradp0)
+
+        # df.plot(gradp.values)
+        # plt.show()
+
         return gradp
 
     def fix_residual(self, res):
@@ -560,7 +554,7 @@ class fenics_NSE_2D_mass_timebc(fenics_NSE_2D_mass):
         Wells and others. Springer (2012).
     """
 
-    def __init__(self, c_nvars=64, t0=0.0, family='CG', order=2, refinements=1, nu=0.001, c=0.0, sigma =0.05):
+    def __init__(self, c_nvars=64, t0=0.0, family='CG', order=2, refinements=1, nu=0.001, c=0.0, sigma=0.05):
         """Initialization routine"""
 
         # define the Dirichlet boundary
@@ -569,47 +563,45 @@ class fenics_NSE_2D_mass_timebc(fenics_NSE_2D_mass):
 
         super().__init__(c_nvars, t0, family, order, refinements, nu, c)
 
-
         # Boundary condition
         # Define inflow profile
         self.inflow_profile = df.Expression(
-                  ('4.0*1.5*sin(pi*t/8)*x[1]*(0.41 - x[1]) / pow(0.41, 2)', '0'),
-                  pi=np.pi,
-                  t=t0,
-                  degree=self.order,
-                  )
-       
-        # Define boundaries   
-        inflow   = 'near(x[0], 0)'
-        outflow  = 'near(x[0], 2.2)'
-        walls    = 'near(x[1], 0) || near(x[1], 0.41)'
+            ('4.0*1.5*sin(pi*t/8)*x[1]*(0.41 - x[1]) / pow(0.41, 2)', '0'),
+            pi=np.pi,
+            t=t0,
+            degree=self.order,
+        )
+
+        # Define boundaries
+        inflow = 'near(x[0], 0)'
+        outflow = 'near(x[0], 2.2)'
+        walls = 'near(x[1], 0) || near(x[1], 0.41)'
         cylinder = 'on_boundary && x[0]>0.1 && x[0]<0.3 && x[1]>0.1 && x[1]<0.3'
 
         # Define boundary conditions
-        bcu_noslip   = df.DirichletBC(self.V, df.Constant((0, 0)), walls)
-        bcu_inflow   = df.DirichletBC(self.V, self.inflow_profile, inflow)
-        bcu_cylinder = df.DirichletBC(self.V, df.Constant((0, 0)),cylinder)
-        bcp_outflow  = df.DirichletBC(self.Q, df.Constant(0), outflow)
+        bcu_noslip = df.DirichletBC(self.V, df.Constant((0, 0)), walls)
+        bcu_inflow = df.DirichletBC(self.V, self.inflow_profile, inflow)
+        bcu_cylinder = df.DirichletBC(self.V, df.Constant((0, 0)), cylinder)
+        bcp_outflow = df.DirichletBC(self.Q, df.Constant(0), outflow)
 
-        self.bcu = [bcu_noslip,bcu_inflow,bcu_cylinder]
+        self.bcu = [bcu_noslip, bcu_inflow, bcu_cylinder]
         self.bcp = [bcp_outflow]
-        
-        
-        #Res_Bound  = 'near(x[0], 0) || on_boundary && x[0]>0.1 && x[0]<0.3 && x[1]>0.1 && x[1]<0.3 || near(x[1], 0) || near(x[1], 0.41)'
-        
-        #self.bc = df.DirichletBC(self.V, self.u_D, Boundary)
-        self.bc_hom = df.DirichletBC(self.V, df.Constant((0.0,0.0)), 'on_boundary')
+
+        # Res_Bound  = 'near(x[0], 0) || on_boundary && x[0]>0.1 && x[0]<0.3 && x[1]>0.1 && x[1]<0.3 || near(x[1], 0) || near(x[1], 0.41)'
+
+        # self.bc = df.DirichletBC(self.V, self.u_D, Boundary)
+        self.bc_hom = df.DirichletBC(self.V, df.Constant((0.0, 0.0)), 'on_boundary')
 
         # set forcing term as expression
-        self.g = df.Expression(('0','0'), t=self.t0, degree=self.order)
+        self.g = df.Expression(('0', '0'), t=self.t0, degree=self.order)
 
         # Create XDMF file for visualization output
         path = '/home/ouardghi/Desktop/pySDC-master/pySDC/projects/FluidFlow/FEniCS/Output/T_dep/PreCond/data_LU_4/'
-        self.xdmffile_p = df.XDMFFile(path+'Cylinder_pressure.xdmf')
-        self.xdmffile_u = df.XDMFFile(path+'Cylinder_velocity.xdmf')
-        
+        self.xdmffile_p = df.XDMFFile(path + 'Cylinder_pressure.xdmf')
+        self.xdmffile_u = df.XDMFFile(path + 'Cylinder_velocity.xdmf')
+
         self.un = df.Function(self.V)
-        #self.un = self.u_exact(t0)
+        # self.un = self.u_exact(t0)
         self.pn = df.Function(self.Q)
 
     def solve_system(self, rhs, factor, u0, t, dtm):
@@ -632,37 +624,37 @@ class fenics_NSE_2D_mass_timebc(fenics_NSE_2D_mass):
         u : dtype_u
             Solution.
         """
-        
+
         K = self.K.copy()
         M = self.M.copy()
         S = self.S.copy()
-        
+
         u = self.dtype_u(u0)
         T = M - factor * K
         b = self.dtype_u(rhs)
         p = df.Function(self.Q)
-        
-        self.inflow_profile.t =t
+
+        self.inflow_profile.t = t
         [bc.apply(T, b.values.vector()) for bc in self.bcu]
         df.solve(T, u.values.vector(), b.values.vector())
-        
+
         #
-        L2 = -(1/dtm)*df.div(u.values)*self.q*df.dx
+        L2 = -(1 / dtm) * df.div(u.values) * self.q * df.dx
         Rhs2 = df.assemble(L2)
-        [bc.apply(S, Rhs2) for bc in self.bcp] 
+        [bc.apply(S, Rhs2) for bc in self.bcp]
         df.solve(S, p.vector(), Rhs2)
         #
 
         #
-        L3 = df.dot(u.values,self.v)*df.dx - dtm*df.dot(df.nabla_grad(p),self.v)*df.dx
+        L3 = df.dot(u.values, self.v) * df.dx - dtm * df.dot(df.nabla_grad(p), self.v) * df.dx
         Rhs3 = df.assemble(L3)
-        [bc.apply(M, Rhs3) for bc in self.bcu] 
+        [bc.apply(M, Rhs3) for bc in self.bcu]
         df.solve(M, u.values.vector(), Rhs3)
         #
 
         self.un = u
         self.pn = p
-        
+
         return u
 
     def u_exact(self, t):
@@ -680,49 +672,33 @@ class fenics_NSE_2D_mass_timebc(fenics_NSE_2D_mass):
             Exact solution.
         """
 
-        
-        
-        
-        #path = '/home/ouardghi/Desktop/pySDC-master/pySDC/projects/FluidFlow/FEniCS/Init/'
-        #xdmffile_p0 = df.XDMFFile(path+'Cylinder_pressure_5.xdmf')
-        #xdmffile_u0 = df.XDMFFile(path+'Cylinder_velocity_5.xdmf')
-        
-        #un = df.Function(self.V)
-        #pn = df.Function(self.Q)
-        
-        #xdmffile_u0.read_checkpoint(un, 'un', 0)
-        #xdmffile_p0.read_checkpoint(pn, 'pn', 0)
-        
-        #self.pn = pn
-        
-        u0 = df.Expression(('0.0','0.0'),degree=self.order)
+        # path = '/home/ouardghi/Desktop/pySDC-master/pySDC/projects/FluidFlow/FEniCS/Init/'
+        # xdmffile_p0 = df.XDMFFile(path+'Cylinder_pressure_5.xdmf')
+        # xdmffile_u0 = df.XDMFFile(path+'Cylinder_velocity_5.xdmf')
+
+        # un = df.Function(self.V)
+        # pn = df.Function(self.Q)
+
+        # xdmffile_u0.read_checkpoint(un, 'un', 0)
+        # xdmffile_p0.read_checkpoint(pn, 'pn', 0)
+
+        # self.pn = pn
+
+        u0 = df.Expression(('0.0', '0.0'), degree=self.order)
         me = self.dtype_u(df.interpolate(u0, self.V), val=self.V)
-        
+
         return me
 
+    def WriteFiles(self, u, t):
 
-    def WriteFiles(self,u,t):
-        
         self.xdmffile_p.write_checkpoint(self.pn, "pn", t, df.XDMFFile.Encoding.HDF5, True)
-        self.xdmffile_u.write_checkpoint(u.values,"un", t, df.XDMFFile.Encoding.HDF5, True)
+        self.xdmffile_u.write_checkpoint(u.values, "un", t, df.XDMFFile.Encoding.HDF5, True)
 
         return None
-        
+
     def CloseXDMFfile(self):
-        
+
         self.xdmffile_p.close()
         self.xdmffile_u.close()
 
         return None
-        
-
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
