@@ -3,10 +3,11 @@ import numpy as np
 
 from pySDC.implementations.controller_classes.controller_nonMPI import controller_nonMPI
 
-from pySDC.projects.FluidFlow.PDEs.Convection_Diffusion.problem_classes.CoupledBurger_2D_FEniCS_matrix_forced import ( 
-      fenics_Burger2D,      
-      fenics_Burger2D_mass, 
-      fenics_Burger2D_mass_timebc)
+from pySDC.projects.FluidFlow.PDEs.Convection_Diffusion.problem_classes.CoupledBurger_2D_FEniCS_matrix_forced import (
+    fenics_Burger2D,
+    fenics_Burger2D_mass,
+    fenics_Burger2D_mass_timebc,
+)
 from pySDC.implementations.sweeper_classes.imex_1st_order_mass import imex_1st_order_mass
 from pySDC.implementations.transfer_classes.BaseTransfer_mass import base_transfer_mass
 from pySDC.implementations.transfer_classes.TransferFenicsMesh import mesh_to_mesh_fenics
@@ -20,6 +21,7 @@ import matplotlib.pyplot as plt
 import matplotlib.tri as mtri
 import matplotlib.cm as cm
 from mpl_toolkits.mplot3d import Axes3D
+
 
 def run_simulation(ml=None, mass=None):
 
@@ -85,32 +87,30 @@ def run_simulation(ml=None, mass=None):
 
     errors = get_sorted(stats, type='error', sortby='iter')
     residuals = get_sorted(stats, type='residual', sortby='iter')
-    
-    
+
     uex = P.u_exact(Tend)
-    
-    fig=plt.figure(figsize=(8,16))
-    
-    
-    error_L2 = df.assemble((uend.values - uex.values)**2 * df.dx)**0.5
+
+    fig = plt.figure(figsize=(8, 16))
+
+    error_L2 = df.assemble((uend.values - uex.values) ** 2 * df.dx) ** 0.5
     print(error_L2)
-    
-    ax=fig.add_subplot(121)
-    df.plot(uend.values, cmap = 'jet')
+
+    ax = fig.add_subplot(121)
+    df.plot(uend.values, cmap='jet')
     plt.axis('scaled')
     plt.xlabel('Distance x')
     plt.ylabel('Distance y')
     plt.title('Numerical Solution')
     plt.draw()
-    
-    ax=fig.add_subplot(122)
-    df.plot(uex.values, cmap = 'jet')
+
+    ax = fig.add_subplot(122)
+    df.plot(uex.values, cmap='jet')
     plt.axis('scaled')
     plt.xlabel('Distance x')
     plt.ylabel('Distance y')
     plt.title('Analytical Solution')
     plt.draw()
-    
+
     """
     ax=fig.add_subplot(221,projection='3d')
     df.plot(uend.values, mode = 'warp')
@@ -143,10 +143,9 @@ def run_simulation(ml=None, mass=None):
     plt.title('Analytical Solution')
     plt.draw()
     """
-    
-         
+
     plt.show()
-    
+
     return errors, residuals
 
 
@@ -264,15 +263,15 @@ def visualize():
 
 if __name__ == "__main__":
 
-    #errors_sdc_noM, _ = run_simulation(ml=False, mass=False)
+    # errors_sdc_noM, _ = run_simulation(ml=False, mass=False)
     errors_sdc_M, _ = run_simulation(ml=False, mass=True)
     # errors_mlsdc_noM, _ = run_simulation(ml=True, mass=False)
     # errors_mlsdc_M, _ = run_simulation(ml=True, mass=True)
     #
-    
-    #np.save('errors_sdc_M.npy',  errors_sdc_M)
-    #np.save('errors_sdc_noM.npy',  errors_sdc_noM)
+
+    # np.save('errors_sdc_M.npy',  errors_sdc_M)
+    # np.save('errors_sdc_noM.npy',  errors_sdc_noM)
     # np.save('errors_mlsdc_M.npy',  errors_mlsdc_M)
     # np.save('errors_mlsdc_noM.npy',  errors_mlsdc_noM)
 
-    #visualize()
+    # visualize()

@@ -3,14 +3,17 @@ import numpy as np
 
 from pySDC.helpers.stats_helper import get_sorted
 from pySDC.implementations.controller_classes.controller_nonMPI import controller_nonMPI
-from pySDC.projects.FluidFlow.DAEs.problem_classes.NavierStokesEquations_2D_FEniCS_matrix_implicit_NL import fenics_NSE_monolithic 
+from pySDC.projects.FluidFlow.DAEs.problem_classes.NavierStokesEquations_2D_FEniCS_matrix_implicit_NL import (
+    fenics_NSE_monolithic,
+)
 from pySDC.projects.FluidFlow.DAEs.sweepers.fully_implicit_DAE_FEniCS_NSE import fully_implicit_DAE
 from pySDC.implementations.transfer_classes.TransferFenicsMesh import mesh_to_mesh_fenics
 
 import dolfin as df
-import matplotlib.pyplot as plt 
+import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 from mpl_toolkits.mplot3d import Axes3D
+
 
 def setup(t0=None):
     """
@@ -38,17 +41,17 @@ def setup(t0=None):
     sweeper_params['quad_type'] = 'RADAU-RIGHT'
     sweeper_params['num_nodes'] = [4]
     sweeper_params['QI'] = ['LU']
-    #sweeper_params['QI'] = ['IEpar']
-    #sweeper_params['QI'] = ['MIN']
-    #sweeper_params['QI'] = ['MIN-SR-NS']
-    #sweeper_params['QI'] = ['MIN-SR-S']
+    # sweeper_params['QI'] = ['IEpar']
+    # sweeper_params['QI'] = ['MIN']
+    # sweeper_params['QI'] = ['MIN-SR-NS']
+    # sweeper_params['QI'] = ['MIN-SR-S']
 
     problem_params = dict()
     problem_params['nu'] = 0.001
     problem_params['t0'] = t0  # ugly, but necessary to set up this ProblemClass
     problem_params['c_nvars'] = [33]
     problem_params['family'] = 'CG'
-    problem_params['c'] = 0.0   
+    problem_params['c'] = 0.0
     problem_params['order'] = [2]
     problem_params['refinements'] = [1]
 
@@ -64,7 +67,7 @@ def setup(t0=None):
     description['problem_class'] = None
     description['problem_class'] = fenics_NSE_monolithic
     description['problem_params'] = problem_params
-    description['sweeper_class'] = fully_implicit_DAE 
+    description['sweeper_class'] = fully_implicit_DAE
     description['sweeper_params'] = sweeper_params
     description['level_params'] = level_params
     description['step_params'] = step_params
@@ -107,25 +110,22 @@ def main():
     uex = P.u_exact(Tend)
     """
 
-    
     path = 'data/data_N4_dt_0025_MIN_SR_S/'
-    f = open(path+'Iter_counts.txt', 'w')
-    
-    
+    f = open(path + 'Iter_counts.txt', 'w')
+
     out = f'Time to solution: {timing[0][1]:6.4f} sec.'
     f.write(out + '\n')
     print(out)
-    
-    
-    out = '   Total number of iterations: %4i' %np.sum(niters)
+
+    out = '   Total number of iterations: %4i' % np.sum(niters)
     f.write(out + '\n')
     print(out)
-    
+
     for i in range(len(iter_counts)):
-        out = '%4i  %4.2f  %4i'  %(i, iter_counts[i][0], iter_counts[i][1])
+        out = '%4i  %4.2f  %4i' % (i, iter_counts[i][0], iter_counts[i][1])
         f.write(out + '\n')
-        #print(out)
-    
+        # print(out)
+
 
 if __name__ == "__main__":
     main()

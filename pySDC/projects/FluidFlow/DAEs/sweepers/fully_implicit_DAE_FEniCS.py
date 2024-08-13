@@ -6,9 +6,10 @@ from pySDC.implementations.sweeper_classes.generic_implicit import generic_impli
 from pySDC.projects.DAE.misc.DAEMesh import DAEMesh
 
 import dolfin as df
-import matplotlib.pyplot as plt 
+import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 from mpl_toolkits.mplot3d import Axes3D
+
 
 class fully_implicit_DAE(generic_implicit):
     r"""
@@ -70,7 +71,7 @@ class fully_implicit_DAE(generic_implicit):
         Updates values of ``u`` and ``f`` at collocation nodes. This correspond to a single iteration of the
         preconditioned Richardson iteration in **"ordinary"** SDC.
         """
-        
+
         L = self.level
         P = L.prob
 
@@ -94,17 +95,14 @@ class fully_implicit_DAE(generic_implicit):
             for j in range(1, m):
                 u_approx += L.dt * self.QI[m, j] * L.f[j]
 
-            
-            L.f[m] = P.solve_system(
-                u_approx, L.dt * self.QI[m, m], L.f[m], L.time + L.dt * self.coll.nodes[m-1]
-            )
+            L.f[m] = P.solve_system(u_approx, L.dt * self.QI[m, m], L.f[m], L.time + L.dt * self.coll.nodes[m - 1])
 
         # Update solution approximation
         integral = self.integrate()
         L.uold = L.u.copy()
         for m in range(M):
-            L.u[m + 1] = L.u[0] + integral[m]            
-            #P.apply_bc(L.u[m+1], L.time + L.dt * self.coll.nodes[m-1])
+            L.u[m + 1] = L.u[0] + integral[m]
+            # P.apply_bc(L.u[m+1], L.time + L.dt * self.coll.nodes[m-1])
 
         # indicate presence of new values at this level
         L.status.updated = True
@@ -176,23 +174,20 @@ class fully_implicit_DAE(generic_implicit):
         res_norm = []
         for m in range(self.coll.num_nodes):
             # use abs function from data type here
-            
-            
+
             res = P.eval_f(L.u[m + 1], L.f[m + 1], L.time + L.dt * self.coll.nodes[m])
             if L.prob.fix_bc_for_residual:
                 L.prob.fix_residual(res)
-            
+
             """
             if L.uold[m+1]!= None:               
                #res = P.Residual(L.u[m+1], L.uold[m+1])
                res = L.u[m+1] - L.uold[m+1]
             else:
                res = L.u[m+1]
-            """     
+            """
             res_norm.append(abs(res))
-         
-        
-        
+
         # find maximal residual over the nodes
         if L.params.residual_type == 'full_abs':
             L.status.residual = max(res_norm)
@@ -207,9 +202,9 @@ class fully_implicit_DAE(generic_implicit):
                 f'residual_type = {L.params.residual_type} not implemented, choose '
                 f'full_abs, last_abs, full_rel or last_rel instead'
             )
-            
-        if L.time == 0.0 and  L.status.residual == 0.0:
-           L.status.residual = 1.0
+
+        if L.time == 0.0 and L.status.residual == 0.0:
+            L.status.residual = 1.0
 
         # indicate that the residual has seen the new values
         L.status.updated = False
@@ -229,11 +224,3 @@ class fully_implicit_DAE(generic_implicit):
             raise NotImplementedError()
 
         super().compute_end_point()
-        
-        
-        
-        
-        
-        
-        
-        

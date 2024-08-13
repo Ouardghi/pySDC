@@ -6,9 +6,10 @@ from pySDC.implementations.sweeper_classes.generic_implicit import generic_impli
 from pySDC.projects.DAE.misc.DAEMesh import DAEMesh
 
 import dolfin as df
-import matplotlib.pyplot as plt 
+import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 from mpl_toolkits.mplot3d import Axes3D
+
 
 class fully_implicit_DAE(generic_implicit):
     r"""
@@ -93,16 +94,13 @@ class fully_implicit_DAE(generic_implicit):
             for j in range(1, m):
                 u_approx += L.dt * self.QI[m, j] * L.f[j]
 
-            
-            L.f[m] = P.solve_system(
-                u_approx, L.dt * self.QI[m, m], L.f[m], L.time + L.dt * self.coll.nodes[m-1]
-            )
+            L.f[m] = P.solve_system(u_approx, L.dt * self.QI[m, m], L.f[m], L.time + L.dt * self.coll.nodes[m - 1])
 
         # Update solution approximation
         L.uold = L.u.copy()
         integral = self.integrate()
         for m in range(M):
-            L.u[m + 1] = L.u[0] + integral[m]            
+            L.u[m + 1] = L.u[0] + integral[m]
 
         # indicate presence of new values at this level
         L.status.updated = True
@@ -174,8 +172,7 @@ class fully_implicit_DAE(generic_implicit):
         res_norm = []
         for m in range(self.coll.num_nodes):
             # use abs function from data type here
-            
-            
+
             res = P.eval_f(L.u[m + 1], L.f[m + 1], L.time + L.dt * self.coll.nodes[m])
             res_norm.append(abs(res))
             """       
@@ -186,7 +183,7 @@ class fully_implicit_DAE(generic_implicit):
             else:
                res_norm.append(1.0)
             """
-        
+
         # find maximal residual over the nodes
         if L.params.residual_type == 'full_abs':
             L.status.residual = max(res_norm)
@@ -201,9 +198,9 @@ class fully_implicit_DAE(generic_implicit):
                 f'residual_type = {L.params.residual_type} not implemented, choose '
                 f'full_abs, last_abs, full_rel or last_rel instead'
             )
-            
-        if L.time == 0.0 and  L.status.residual == 0.0:
-           L.status.residual = 1.0
+
+        if L.time == 0.0 and L.status.residual == 0.0:
+            L.status.residual = 1.0
 
         # indicate that the residual has seen the new values
         L.status.updated = False
@@ -223,18 +220,9 @@ class fully_implicit_DAE(generic_implicit):
             raise NotImplementedError()
 
         super().compute_end_point()
-        
-        
+
         L = self.level
-        
-        #L.prob.apply_bc(L.uend, L.time + L.dt)
-        L.prob.WriteFiles(L.uend, L.f[-1], L.time + L.dt)        
+
+        # L.prob.apply_bc(L.uend, L.time + L.dt)
+        L.prob.WriteFiles(L.uend, L.f[-1], L.time + L.dt)
         L.prob.OldSolution(L.uend)
-                 
-       
-        
-        
-        
-        
-        
-        

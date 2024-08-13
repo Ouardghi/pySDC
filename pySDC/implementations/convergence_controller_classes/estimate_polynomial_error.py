@@ -133,18 +133,15 @@ class EstimatePolynomialError(ConvergenceController):
             ]
             u_inter = self.matmul(self.interpolation_matrix, u)[0].reshape(L.prob.init[0])
             """
-            
-            u = [
-                 L.u[i] for i in range(coll.num_nodes + 1)
-                if i != estimate_on_node
-            ]
-                        
-            P = L.prob; u_inter = P.dtype_u(P.init, val=0.0)
-            
+
+            u = [L.u[i] for i in range(coll.num_nodes + 1) if i != estimate_on_node]
+
+            P = L.prob
+            u_inter = P.dtype_u(P.init, val=0.0)
+
             for i in range(len(u)):
-                u_inter +=  self.interpolation_matrix[0][i]*u[i]
-            
-            
+                u_inter += self.interpolation_matrix[0][i] * u[i]
+
             # compute end point if needed
             if estimate_on_node == len(nodes) - 1:
                 if L.uend is None:

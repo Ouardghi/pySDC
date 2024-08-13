@@ -9,9 +9,10 @@ from pySDC.projects.FluidFlow.DAEs.sweepers.fully_implicit_DAE_FEniCS import ful
 from pySDC.implementations.transfer_classes.TransferFenicsMesh import mesh_to_mesh_fenics
 
 import dolfin as df
-import matplotlib.pyplot as plt 
+import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 from mpl_toolkits.mplot3d import Axes3D
+
 
 def setup(t0=None):
     """
@@ -39,10 +40,10 @@ def setup(t0=None):
     sweeper_params['quad_type'] = 'RADAU-RIGHT'
     sweeper_params['num_nodes'] = [3]
     sweeper_params['QI'] = ['LU']
-    #sweeper_params['QI'] = ['IEpar']
-    #sweeper_params['QI'] = ['MIN']
-    #sweeper_params['QI'] = ['MIN-SR-NS']
-    #sweeper_params['QI'] = ['MIN-SR-S']
+    # sweeper_params['QI'] = ['IEpar']
+    # sweeper_params['QI'] = ['MIN']
+    # sweeper_params['QI'] = ['MIN-SR-NS']
+    # sweeper_params['QI'] = ['MIN-SR-S']
 
     problem_params = dict()
     problem_params['nu'] = 0.002
@@ -71,8 +72,8 @@ def setup(t0=None):
     description['space_transfer_class'] = mesh_to_mesh_fenics
     description['base_transfer_params'] = base_transfer_params
     description['problem_class'] = fenics_heat
-    description['sweeper_class'] = fully_implicit_DAE 
-    
+    description['sweeper_class'] = fully_implicit_DAE
+
     return description, controller_params
 
 
@@ -104,40 +105,38 @@ def main():
     uex = P.u_exact(Tend)
     err = abs(uex - uend) / abs(uex)
 
-    #print(uex.values.vector()[:])
-    fig=plt.figure(figsize=(8,16))
-    
-    ax=fig.add_subplot(221,projection='3d')
-    df.plot(uend.values.sub(0), mode = 'warp')
+    # print(uex.values.vector()[:])
+    fig = plt.figure(figsize=(8, 16))
+
+    ax = fig.add_subplot(221, projection='3d')
+    df.plot(uend.values.sub(0), mode='warp')
     ax.set_xlabel('Distance x')
     ax.set_ylabel('Distance y')
     ax.set_title('SDC-FEniCS Solution')
     plt.draw()
-    
-    ax=fig.add_subplot(222,projection='3d')
-    df.plot(uex.values.sub(0), mode = 'warp')
+
+    ax = fig.add_subplot(222, projection='3d')
+    df.plot(uex.values.sub(0), mode='warp')
     ax.set_xlabel('Distance x')
     ax.set_ylabel('Distance y')
     ax.set_title('Exact Solution')
     plt.draw()
 
-
-    ax=fig.add_subplot(223)
-    df.plot(uend.values.sub(0), mode = 'contour', levels = 25, cmap = 'jet')
+    ax = fig.add_subplot(223)
+    df.plot(uend.values.sub(0), mode='contour', levels=25, cmap='jet')
     plt.axis('scaled')
     plt.xlabel('Distance x')
     plt.ylabel('Distance y')
     plt.title('Numerical Solution')
     plt.draw()
-    
-    ax=fig.add_subplot(224)
-    df.plot(uex.values.sub(0), mode = 'contour', levels = 25, cmap = 'jet')
+
+    ax = fig.add_subplot(224)
+    df.plot(uex.values.sub(0), mode='contour', levels=25, cmap='jet')
     plt.axis('scaled')
     plt.xlabel('Distance x')
     plt.ylabel('Distance y')
     plt.title('Exact Solution')
     plt.draw()
-
 
     Path("data").mkdir(parents=True, exist_ok=True)
     f = open('data/step_7_A_out.txt', 'a')

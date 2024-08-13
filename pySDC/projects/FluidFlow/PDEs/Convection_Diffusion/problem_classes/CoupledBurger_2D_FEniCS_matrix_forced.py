@@ -2,19 +2,19 @@ import logging
 
 import dolfin as df
 import numpy as np
-from mshr import*
+from mshr import *
 
-import matplotlib.pyplot as plt 
+import matplotlib.pyplot as plt
 
-from pySDC.core.problem import Problem 
+from pySDC.core.problem import Problem
 from pySDC.implementations.datatype_classes.fenics_mesh import fenics_mesh, rhs_fenics_mesh
 
 
 # noinspection PyUnusedLocal
 class fenics_Burger2D(Problem):
     r"""
-    This example demonstrates the implementation of a forced two-dimensional convection-diffusion equation using 
-    Dirichlet boundary conditions. The problem considered is the coupled viscous Burger's equations.    
+    This example demonstrates the implementation of a forced two-dimensional convection-diffusion equation using
+    Dirichlet boundary conditions. The problem considered is the coupled viscous Burger's equations.
 
     The equations we are solving are the two-dimensional nonlinear convection-diffusion equation:
 
@@ -30,28 +30,28 @@ class fenics_Burger2D(Problem):
         .. math:`f(x, y, t)` is the source term, representing external forcing or generation of .. math:`u`.
 
     The computational domain for this problem is:
-    
+
     .. math::
          x \in \Omega := [0, 1] \times [0, 1]
 
     Dirichlet boundary conditions are applied, meaning that the value of .. math:`u` is specified on the boundary of the domain.
     In this benchmark example, the forcing term .. math:`f` is:
-    
+
     .. math::
         f(x,y,t) = 0
-    
-    This implies there are no additional sources or sinks affecting the field .. math:`u`, simplifying the problem to just the 
+
+    This implies there are no additional sources or sinks affecting the field .. math:`u`, simplifying the problem to just the
     effects of convection and diffusion. The analytical solution for the vector field .. math:`u is given by:
-    
+
     .. math::
         u_1(,y,t) = \frac{3}{4}-\frac{1}{g(x,y,t)}
         u_2(,y,t) = \frac{3}{4}+\frac{1}{g(x,y,t)}
-    
-    where       
-    .. math:: 
-        g(x,y,t) = 4*(1+\exp(- \frac{(4*x - 4*y + t)*Re}{32}))    
 
-    This solution describes the velocity components .. math:`u_1` and .. math:`u_2` in the domain over time, showing how 
+    where
+    .. math::
+        g(x,y,t) = 4*(1+\exp(- \frac{(4*x - 4*y + t)*Re}{32}))
+
+    This solution describes the velocity components .. math:`u_1` and .. math:`u_2` in the domain over time, showing how
     the initial conditions evolve due to convection and diffusion.
 
     Parameters
@@ -85,20 +85,20 @@ class fenics_Burger2D(Problem):
         The forcing term :math:`f` in the heat equation.
     bc : DirichletBC
         Denotes the Dirichlet boundary conditions.
-        
+
     References
     ----------
     .. [1] The FEniCS Project Version 1.5. M. S. Alnaes, J. Blechta, J. Hake, A. Johansson, B. Kehlet, A. Logg,
         C. Richardson, J. Ring, M. E. Rognes, G. N. Wells. Archive of Numerical Software (2015).
     .. [2] Automated Solution of Differential Equations by the Finite Element Method. A. Logg, K.-A. Mardal, G. N.
-        Wells and others. Springer (2012).    
+        Wells and others. Springer (2012).
 
     """
 
     dtype_u = fenics_mesh
     dtype_f = rhs_fenics_mesh
 
-    def __init__(self, c_nvars=64, t0=0.0, family='CG', order=2, refinements=1, nu=0.002, c=0.0, sigma =0.05):
+    def __init__(self, c_nvars=64, t0=0.0, family='CG', order=2, refinements=1, nu=0.002, c=0.0, sigma=0.05):
         """Initialization routine"""
 
         # define the Dirichlet boundary
@@ -113,20 +113,19 @@ class fenics_Burger2D(Problem):
         df.parameters["form_compiler"]["optimize"] = True
         df.parameters["form_compiler"]["cpp_optimize"] = True
         df.parameters['allow_extrapolation'] = True
-        
+
         # set mesh and refinement (for multilevel)
         domain = Rectangle(df.Point(0.0, 0.0), df.Point(1.0, 1.0))
         mesh = generate_mesh(domain, c_nvars)
-        
-        #for _ in range(refinements):
+
+        # for _ in range(refinements):
         #    mesh = df.refine(mesh)
 
         # define function space for future reference
         self.V = df.VectorFunctionSpace(mesh, family, order)
         tmp = df.Function(self.V)
         print('DoFs on this level:', len(tmp.vector()[:]))
-        
-        
+
         # invoke super init, passing number of dofs, dtype_u and dtype_f
         super(fenics_Burger2D, self).__init__(self.V)
         self._makeAttributeAndRegister(
@@ -136,27 +135,27 @@ class fenics_Burger2D(Problem):
         # Stiffness term (Laplace)
         u = df.TrialFunction(self.V)
         v = df.TestFunction(self.V)
-        
+
         self.u = df.TrialFunction(self.V)
         self.v = df.TestFunction(self.V)
-        
+
         a_K = -1.0 * df.inner(df.nabla_grad(u), self.nu * df.nabla_grad(v)) * df.dx
 
         # Mass term
-        a_M = df.inner(u , v) * df.dx
+        a_M = df.inner(u, v) * df.dx
 
         self.M = df.assemble(a_M)
         self.K = df.assemble(a_K)
 
         # set boundary values
-        self.bc = df.DirichletBC(self.V, df.Constant((0.0,0.0)), Boundary)
-        self.bc_hom = df.DirichletBC(self.V, df.Constant((0.0,0.0)), Boundary)
+        self.bc = df.DirichletBC(self.V, df.Constant((0.0, 0.0)), Boundary)
+        self.bc_hom = df.DirichletBC(self.V, df.Constant((0.0, 0.0)), Boundary)
 
         # set forcing term as expression
-        self.g = df.Expression(('0.0','0.0'), t=self.t0, degree=self.order)
-        
-        self.un = self.u_exact(0.0)               
-        
+        self.g = df.Expression(('0.0', '0.0'), t=self.t0, degree=self.order)
+
+        self.un = self.u_exact(0.0)
+
     def solve_system(self, rhs, factor, u0, t):
         r"""
         Dolfin's linear solver for :math:`(M - factor \cdot A) \vec{u} = \vec{rhs}`.
@@ -184,7 +183,7 @@ class fenics_Burger2D(Problem):
         T = self.M - factor * self.K
         self.bc.apply(T, b.values.vector())
         df.solve(T, u.values.vector(), b.values.vector())
-        self.un =u
+        self.un = u
         return u
 
     def __eval_fexpl(self, u, t):
@@ -205,17 +204,17 @@ class fenics_Burger2D(Problem):
         """
 
         self.g.t = t
-        fexpl1 = self.dtype_u(df.interpolate(self.g, self.V))       
+        fexpl1 = self.dtype_u(df.interpolate(self.g, self.V))
 
-        a_C = -1.0 * df.inner(df.dot(self.un.values, df.nabla_grad(self.un.values)), self.v) * df.dx    
+        a_C = -1.0 * df.inner(df.dot(self.un.values, df.nabla_grad(self.un.values)), self.v) * df.dx
         self.C = df.assemble(a_C)
-                
-        tmp = self.dtype_u(self.V) 
+
+        tmp = self.dtype_u(self.V)
         tmp.values.vector()[:] = self.C[:]
         fexpl2 = self.__invert_mass_matrix(tmp)
 
         fexpl = fexpl1 + fexpl2
-        
+
         return fexpl
 
     def __eval_fimpl(self, u, t):
@@ -323,13 +322,16 @@ class fenics_Burger2D(Problem):
         """
 
         u0 = df.Expression(
-         ('0.75-1.0/(4.0*(1+exp(-((4*x[0]-4*x[1]+t)*Re)/32)))','0.75+1.0/(4.0*(1+exp(-((4*x[0]-4*x[1]+t)*Re)/32)))'),
-         Re=500,
-         t=t,
-         degree=self.order,
+            (
+                '0.75-1.0/(4.0*(1+exp(-((4*x[0]-4*x[1]+t)*Re)/32)))',
+                '0.75+1.0/(4.0*(1+exp(-((4*x[0]-4*x[1]+t)*Re)/32)))',
+            ),
+            Re=500,
+            t=t,
+            degree=self.order,
         )
-        
-        #u0 = df.Expression('sin(a*x[0]) * sin(a*x[1]) * cos(t) + c', c=self.c, a=np.pi, t=t, degree=self.order)
+
+        # u0 = df.Expression('sin(a*x[0]) * sin(a*x[1]) * cos(t) + c', c=self.c, a=np.pi, t=t, degree=self.order)
         me = self.dtype_u(df.interpolate(u0, self.V), val=self.V)
 
         return me
@@ -338,8 +340,8 @@ class fenics_Burger2D(Problem):
 # noinspection PyUnusedLocal
 class fenics_Burger2D_mass(fenics_Burger2D):
     r"""
-    This example demonstrates the implementation of a forced two-dimensional convection-diffusion equation using 
-    Dirichlet boundary conditions. The problem considered is the coupled viscous Burger's equations.    
+    This example demonstrates the implementation of a forced two-dimensional convection-diffusion equation using
+    Dirichlet boundary conditions. The problem considered is the coupled viscous Burger's equations.
 
     The equations we are solving are the two-dimensional nonlinear convection-diffusion equation:
 
@@ -355,28 +357,28 @@ class fenics_Burger2D_mass(fenics_Burger2D):
         .. math:`f(x, y, t)` is the source term, representing external forcing or generation of .. math:`u`.
 
     The computational domain for this problem is:
-    
+
     .. math::
          x \in \Omega := [0, 1] \times [0, 1]
 
     Dirichlet boundary conditions are applied, meaning that the value of .. math:`u` is specified on the boundary of the domain.
     In this benchmark example, the forcing term .. math:`f` is:
-    
+
     .. math::
         f(x,y,t) = 0
-    
-    This implies there are no additional sources or sinks affecting the field .. math:`u`, simplifying the problem to just the 
+
+    This implies there are no additional sources or sinks affecting the field .. math:`u`, simplifying the problem to just the
     effects of convection and diffusion. The analytical solution for the vector field .. math:`u is given by:
-    
+
     .. math::
         u_1(,y,t) = \frac{3}{4}-\frac{1}{g(x,y,t)}
         u_2(,y,t) = \frac{3}{4}+\frac{1}{g(x,y,t)}
-    
-    where       
-    .. math:: 
-        g(x,y,t) = 4*(1+\exp(- \frac{(4*x - 4*y + t)*Re}{32}))    
 
-    This solution describes the velocity components .. math:`u_1` and .. math:`u_2` in the domain over time, showing how 
+    where
+    .. math::
+        g(x,y,t) = 4*(1+\exp(- \frac{(4*x - 4*y + t)*Re}{32}))
+
+    This solution describes the velocity components .. math:`u_1` and .. math:`u_2` in the domain over time, showing how
     the initial conditions evolve due to convection and diffusion.
 
     Parameters
@@ -421,7 +423,7 @@ class fenics_Burger2D_mass(fenics_Burger2D):
         Wells and others. Springer (2012).
     """
 
-    def __init__(self, c_nvars=64, t0=0.0, family='CG', order=2, refinements=1, nu=0.002, c=0.0, sigma =0.05):
+    def __init__(self, c_nvars=64, t0=0.0, family='CG', order=2, refinements=1, nu=0.002, c=0.0, sigma=0.05):
         """Initialization routine"""
 
         super().__init__(c_nvars, t0, family, order, refinements, nu, c)
@@ -456,8 +458,8 @@ class fenics_Burger2D_mass(fenics_Burger2D):
         self.bc.apply(T, b.values.vector())
 
         df.solve(T, u.values.vector(), b.values.vector())
-        
-        self.un=u
+
+        self.un = u
         return u
 
     def eval_f(self, u, t):
@@ -484,15 +486,15 @@ class fenics_Burger2D_mass(fenics_Burger2D):
         self.g.t = t
         fexpl1 = self.dtype_u(df.interpolate(self.g, self.V))
         fexpl1 = self.apply_mass_matrix(fexpl1)
-        
-        a_C = -1.0 * df.inner(df.dot(self.un.values, df.nabla_grad(self.un.values)), self.v) * df.dx    
+
+        a_C = -1.0 * df.inner(df.dot(self.un.values, df.nabla_grad(self.un.values)), self.v) * df.dx
         self.C = df.assemble(a_C)
-                
-        fexpl2  = self.dtype_u(self.V) 
+
+        fexpl2 = self.dtype_u(self.V)
         fexpl2.values.vector()[:] = self.C[:]
-        
-        f.expl  = fexpl1 + fexpl2 
-                
+
+        f.expl = fexpl1 + fexpl2
+
         return f
 
     def fix_residual(self, res):
@@ -511,8 +513,8 @@ class fenics_Burger2D_mass(fenics_Burger2D):
 # noinspection PyUnusedLocal
 class fenics_Burger2D_mass_timebc(fenics_Burger2D_mass):
     r"""
-    This example demonstrates the implementation of a forced two-dimensional convection-diffusion equation using 
-    Dirichlet boundary conditions. The problem considered is the coupled viscous Burger's equations.    
+    This example demonstrates the implementation of a forced two-dimensional convection-diffusion equation using
+    Dirichlet boundary conditions. The problem considered is the coupled viscous Burger's equations.
 
     The equations we are solving are the two-dimensional nonlinear convection-diffusion equation:
 
@@ -528,28 +530,28 @@ class fenics_Burger2D_mass_timebc(fenics_Burger2D_mass):
         .. math:`f(x, y, t)` is the source term, representing external forcing or generation of .. math:`u`.
 
     The computational domain for this problem is:
-    
+
     .. math::
          x \in \Omega := [0, 1] \times [0, 1]
 
     Dirichlet boundary conditions are applied, meaning that the value of .. math:`u` is specified on the boundary of the domain.
     In this benchmark example, the forcing term .. math:`f` is:
-    
+
     .. math::
         f(x,y,t) = 0
-    
-    This implies there are no additional sources or sinks affecting the field .. math:`u`, simplifying the problem to just the 
+
+    This implies there are no additional sources or sinks affecting the field .. math:`u`, simplifying the problem to just the
     effects of convection and diffusion. The analytical solution for the vector field .. math:`u is given by:
-    
+
     .. math::
         u_1(,y,t) = \frac{3}{4}-\frac{1}{g(x,y,t)}
         u_2(,y,t) = \frac{3}{4}+\frac{1}{g(x,y,t)}
-    
-    where       
-    .. math:: 
-        g(x,y,t) = 4*(1+\exp(- \frac{(4*x - 4*y + t)*Re}{32}))    
 
-    This solution describes the velocity components .. math:`u_1` and .. math:`u_2` in the domain over time, showing how 
+    where
+    .. math::
+        g(x,y,t) = 4*(1+\exp(- \frac{(4*x - 4*y + t)*Re}{32}))
+
+    This solution describes the velocity components .. math:`u_1` and .. math:`u_2` in the domain over time, showing how
     the initial conditions evolve due to convection and diffusion.
 
     In this class the problem is implemented in the way that the spatial part is solved using ``FEniCS`` [1]_. Hence, the problem
@@ -603,7 +605,7 @@ class fenics_Burger2D_mass_timebc(fenics_Burger2D_mass):
         Wells and others. Springer (2012).
     """
 
-    def __init__(self, c_nvars=64, t0=0.0, family='CG', order=2, refinements=1, nu=0.002, c=0.0, sigma =0.05):
+    def __init__(self, c_nvars=64, t0=0.0, family='CG', order=2, refinements=1, nu=0.002, c=0.0, sigma=0.05):
         """Initialization routine"""
 
         # define the Dirichlet boundary
@@ -613,20 +615,20 @@ class fenics_Burger2D_mass_timebc(fenics_Burger2D_mass):
         super().__init__(c_nvars, t0, family, order, refinements, nu, c)
 
         self.u_D = df.Expression(
-         ('0.75-1.0/(4.0*(1+exp(-((4*x[0]-4*x[1]+t)*Re)/32)))','0.75+1.0/(4.0*(1+exp(-((4*x[0]-4*x[1]+t)*Re)/32)))'),
-         Re=500,
-         t=t0,
-         degree=self.order,
+            (
+                '0.75-1.0/(4.0*(1+exp(-((4*x[0]-4*x[1]+t)*Re)/32)))',
+                '0.75+1.0/(4.0*(1+exp(-((4*x[0]-4*x[1]+t)*Re)/32)))',
+            ),
+            Re=500,
+            t=t0,
+            degree=self.order,
         )
 
-        
         self.bc = df.DirichletBC(self.V, self.u_D, Boundary)
-        self.bc_hom = df.DirichletBC(self.V, df.Constant((0.0,0.0)), Boundary)
+        self.bc_hom = df.DirichletBC(self.V, df.Constant((0.0, 0.0)), Boundary)
 
         # set forcing term as expression
-        self.g = df.Expression(('0','0'), t=self.t0, degree=self.order)
-
-
+        self.g = df.Expression(('0', '0'), t=self.t0, degree=self.order)
 
     def solve_system(self, rhs, factor, u0, t):
         r"""
@@ -656,10 +658,10 @@ class fenics_Burger2D_mass_timebc(fenics_Burger2D_mass):
         self.u_D.t = t
 
         self.bc.apply(T, b.values.vector())
-        #self.bc.apply(b.values.vector())
+        # self.bc.apply(b.values.vector())
 
         df.solve(T, u.values.vector(), b.values.vector())
-        
+
         self.un = u
         return u
 
@@ -679,12 +681,15 @@ class fenics_Burger2D_mass_timebc(fenics_Burger2D_mass):
         """
 
         u0 = df.Expression(
-         ('0.75-1.0/(4.0*(1+exp(-((4*x[0]-4*x[1]+t)*Re)/32)))','0.75+1.0/(4.0*(1+exp(-((4*x[0]-4*x[1]+t)*Re)/32)))'),
-         Re=500,
-         t=t,
-         degree=self.order,
+            (
+                '0.75-1.0/(4.0*(1+exp(-((4*x[0]-4*x[1]+t)*Re)/32)))',
+                '0.75+1.0/(4.0*(1+exp(-((4*x[0]-4*x[1]+t)*Re)/32)))',
+            ),
+            Re=500,
+            t=t,
+            degree=self.order,
         )
-        
+
         me = self.dtype_u(df.interpolate(u0, self.V), val=self.V)
 
         return me

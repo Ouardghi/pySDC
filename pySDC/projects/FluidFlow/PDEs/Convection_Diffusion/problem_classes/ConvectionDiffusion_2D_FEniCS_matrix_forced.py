@@ -2,17 +2,17 @@ import logging
 
 import dolfin as df
 import numpy as np
-from mshr import*
- 
+from mshr import *
+
 from pySDC.core.problem import Problem
 from pySDC.implementations.datatype_classes.fenics_mesh import fenics_mesh, rhs_fenics_mesh
 
 
 # noinspection PyUnusedLocal
 class fenics_ConvDiff2D(Problem):
-    r"""    
-    This example demonstrates the implementation of a forced two-dimensional convection-diffusion equation using 
-    Dirichlet boundary conditions. The problem considered is a benchmark test with a rotating Gaussian profile.    
+    r"""
+    This example demonstrates the implementation of a forced two-dimensional convection-diffusion equation using
+    Dirichlet boundary conditions. The problem considered is a benchmark test with a rotating Gaussian profile.
 
     The equation we are solving is the two-dimensional convection-diffusion equation:
 
@@ -29,23 +29,23 @@ class fenics_ConvDiff2D(Problem):
         .. math:`f(x, y, t)` is the source term, representing external forcing or generation of .. math:`u`.
 
     The computational domain for this problem is:
-    
+
     .. math::
          x \in \Omega := [-0.5, 0.5] \times [-0.5, 0.5]
 
     Dirichlet boundary conditions are applied, meaning that the value of .. math:`u` is specified on the boundary of the domain.
     In this benchmark example, the forcing term .. math:`f` is:
-    
+
     .. math::
         f(x,y,t) = 0
-    
-    This implies there are no additional sources or sinks affecting the field .. math:`u`, simplifying the problem to just the 
+
+    This implies there are no additional sources or sinks affecting the field .. math:`u`, simplifying the problem to just the
     effects of convection and diffusion. The analytical solution for the scalar field .. math:`u is given by:
-    
+
     .. math::
-        u(x,y,t) = \frac{\sigma^2}{\sigma^2 + \omega\nu t}*\exp(- \frac{(\hat{x}-x_0)^2 + (\hat{y}-y_0)^2}{\sigma^2 + \omega\nu t} 
-    
-    
+        u(x,y,t) = \frac{\sigma^2}{\sigma^2 + \omega\nu t}*\exp(- \frac{(\hat{x}-x_0)^2 + (\hat{y}-y_0)^2}{\sigma^2 + \omega\nu t}
+
+
     where:
       .. math:`\sigma` is the initial standard deviation of the Gaussian.
       .. math:`\omega` is the angular velocity of the rotation.
@@ -56,16 +56,16 @@ class fenics_ConvDiff2D(Problem):
           \hat{y} = -\sin(\omega t) x + \cos(\omega t) y
       .. math:`(x_0, y_0)` is the center of the Gaussian, given as .. math:`(-0.25, 0.0)`.
 
- 
+
     The velocity field .. math:`U` for the rotating Gaussian is defined as:
-    
+
     .. math::
         U = (u,v) = (-\omega*y, \omega*x)
-    
-    This represents a counter-clockwise rotation around the origin with angular velocity .. math:`\omega`. 
+
+    This represents a counter-clockwise rotation around the origin with angular velocity .. math:`\omega`.
     The flow causes the scalar field .. math:`u` to be advected in a circular pattern, simulating the rotation of the Gaussian.
-    
-    
+
+
     Parameters
     ----------
     c_nvars : int, optional
@@ -109,7 +109,7 @@ class fenics_ConvDiff2D(Problem):
     dtype_u = fenics_mesh
     dtype_f = rhs_fenics_mesh
 
-    def __init__(self, c_nvars=64, t0=0.0, family='CG', order=2, refinements=1, nu=0.01, c=0.0, sigma =0.05):
+    def __init__(self, c_nvars=64, t0=0.0, family='CG', order=2, refinements=1, nu=0.01, c=0.0, sigma=0.05):
         """Initialization routine"""
 
         # define the Dirichlet boundary
@@ -126,14 +126,14 @@ class fenics_ConvDiff2D(Problem):
         df.parameters['allow_extrapolation'] = True
 
         # set mesh and refinement (for multilevel)
-        #mesh = df.UnitIntervalMesh(c_nvars)
-        
-        #mesh = df.UnitSquareMesh(c_nvars,c_nvars)
-        
+        # mesh = df.UnitIntervalMesh(c_nvars)
+
+        # mesh = df.UnitSquareMesh(c_nvars,c_nvars)
+
         # set mesh and refinement (for multilevel)
         domain = Rectangle(df.Point(-0.5, -0.5), df.Point(0.5, 0.5))
         mesh = generate_mesh(domain, c_nvars)
-        
+
         for _ in range(refinements):
             mesh = df.refine(mesh)
 
@@ -141,13 +141,12 @@ class fenics_ConvDiff2D(Problem):
         self.V = df.FunctionSpace(mesh, family, order)
         tmp = df.Function(self.V)
         print('DoFs on this level:', len(tmp.vector()[:]))
-        
-        # define velocity 
+
+        # define velocity
         self.VC = df.VectorFunctionSpace(mesh, family, order)
-        expr = df.Expression(('-4*x[1]','4*x[0]'), degree=order)
+        expr = df.Expression(('-4*x[1]', '4*x[0]'), degree=order)
         self.U = df.interpolate(expr, self.VC)
-        
-        
+
         # invoke super init, passing number of dofs, dtype_u and dtype_f
         super(fenics_ConvDiff2D, self).__init__(self.V)
         self._makeAttributeAndRegister(
@@ -157,10 +156,10 @@ class fenics_ConvDiff2D(Problem):
         # Stiffness term (Laplace)
         u = df.TrialFunction(self.V)
         v = df.TestFunction(self.V)
-        
+
         self.u = df.TrialFunction(self.V)
         self.v = df.TestFunction(self.V)
-        
+
         a_K = -1.0 * df.inner(df.nabla_grad(u), self.nu * df.nabla_grad(v)) * df.dx
 
         # Mass term
@@ -175,7 +174,7 @@ class fenics_ConvDiff2D(Problem):
 
         # set forcing term as expression
         self.g = df.Expression('0.0', t=self.t0, degree=self.order)
-        
+
         self.un = self.u_exact(0.0)
 
     def solve_system(self, rhs, factor, u0, t):
@@ -205,7 +204,7 @@ class fenics_ConvDiff2D(Problem):
         T = self.M - factor * self.K
         self.bc.apply(T, b.values.vector())
         df.solve(T, u.values.vector(), b.values.vector())
-        self.un =u
+        self.un = u
         return u
 
     def __eval_fexpl(self, u, t):
@@ -226,17 +225,17 @@ class fenics_ConvDiff2D(Problem):
         """
 
         self.g.t = t
-        fexpl1 = self.dtype_u(df.interpolate(self.g, self.V))       
+        fexpl1 = self.dtype_u(df.interpolate(self.g, self.V))
 
-        a_C = -1.0 * df.inner(df.inner(self.U, df.nabla_grad(self.un.values)), self.v) * df.dx    
+        a_C = -1.0 * df.inner(df.inner(self.U, df.nabla_grad(self.un.values)), self.v) * df.dx
         self.C = df.assemble(a_C)
-                
-        tmp = self.dtype_u(self.V) 
+
+        tmp = self.dtype_u(self.V)
         tmp.values.vector()[:] = self.C[:]
         fexpl2 = self.__invert_mass_matrix(tmp)
 
         fexpl = fexpl1 + fexpl2
-        
+
         return fexpl
 
     def __eval_fimpl(self, u, t):
@@ -349,12 +348,12 @@ class fenics_ConvDiff2D(Problem):
             s=self.sigma,
             nu=self.nu,
             x0=-0.25,
-            y0= 0.0,
+            y0=0.0,
             t=t,
             degree=self.order,
         )
-        
-        #u0 = df.Expression('sin(a*x[0]) * sin(a*x[1]) * cos(t) + c', c=self.c, a=np.pi, t=t, degree=self.order)
+
+        # u0 = df.Expression('sin(a*x[0]) * sin(a*x[1]) * cos(t) + c', c=self.c, a=np.pi, t=t, degree=self.order)
         me = self.dtype_u(df.interpolate(u0, self.V), val=self.V)
 
         return me
@@ -362,9 +361,9 @@ class fenics_ConvDiff2D(Problem):
 
 # noinspection PyUnusedLocal
 class fenics_ConvDiff2D_mass(fenics_ConvDiff2D):
-    r"""    
-    This example demonstrates the implementation of a forced two-dimensional convection-diffusion equation using 
-    Dirichlet boundary conditions. The problem considered is a benchmark test with a rotating Gaussian profile.    
+    r"""
+    This example demonstrates the implementation of a forced two-dimensional convection-diffusion equation using
+    Dirichlet boundary conditions. The problem considered is a benchmark test with a rotating Gaussian profile.
 
     The equation we are solving is the two-dimensional convection-diffusion equation:
 
@@ -381,23 +380,23 @@ class fenics_ConvDiff2D_mass(fenics_ConvDiff2D):
         .. math:`f(x, y, t)` is the source term, representing external forcing or generation of .. math:`u`.
 
     The computational domain for this problem is:
-    
+
     .. math::
          x \in \Omega := [-0.5, 0.5] \times [-0.5, 0.5]
 
     Dirichlet boundary conditions are applied, meaning that the value of .. math:`u` is specified on the boundary of the domain.
     In this benchmark example, the forcing term .. math:`f` is:
-    
+
     .. math::
         f(x,y,t) = 0
-    
-    This implies there are no additional sources or sinks affecting the field .. math:`u`, simplifying the problem to just the 
+
+    This implies there are no additional sources or sinks affecting the field .. math:`u`, simplifying the problem to just the
     effects of convection and diffusion. The analytical solution for the scalar field .. math:`u is given by:
-    
+
     .. math::
-        u(x,y,t) = \frac{\sigma^2}{\sigma^2 + \omega\nu t}*\exp(- \frac{(\hat{x}-x_0)^2 + (\hat{y}-y_0)^2}{\sigma^2 + \omega\nu t} 
-    
-    
+        u(x,y,t) = \frac{\sigma^2}{\sigma^2 + \omega\nu t}*\exp(- \frac{(\hat{x}-x_0)^2 + (\hat{y}-y_0)^2}{\sigma^2 + \omega\nu t}
+
+
     where:
       .. math:`\sigma` is the initial standard deviation of the Gaussian.
       .. math:`\omega` is the angular velocity of the rotation.
@@ -408,16 +407,16 @@ class fenics_ConvDiff2D_mass(fenics_ConvDiff2D):
           \hat{y} = -\sin(\omega t) x + \cos(\omega t) y
       .. math:`(x_0, y_0)` is the center of the Gaussian, given as .. math:`(-0.25, 0.0)`.
 
- 
+
     The velocity field .. math:`U` for the rotating Gaussian is defined as:
-    
+
     .. math::
         U = (u,v) = (-\omega*y, \omega*x)
-    
-    This represents a counter-clockwise rotation around the origin with angular velocity .. math:`\omega`. 
+
+    This represents a counter-clockwise rotation around the origin with angular velocity .. math:`\omega`.
     The flow causes the scalar field .. math:`u` to be advected in a circular pattern, simulating the rotation of the Gaussian.
-    
-    
+
+
     Parameters
     ----------
     c_nvars : int, optional
@@ -458,7 +457,7 @@ class fenics_ConvDiff2D_mass(fenics_ConvDiff2D):
         Wells and others. Springer (2012).
     """
 
-    def __init__(self, c_nvars=64, t0=0.0, family='CG', order=2, refinements=1, nu=0.1, c=0.0, sigma =0.05):
+    def __init__(self, c_nvars=64, t0=0.0, family='CG', order=2, refinements=1, nu=0.1, c=0.0, sigma=0.05):
         """Initialization routine"""
 
         super().__init__(c_nvars, t0, family, order, refinements, nu, c)
@@ -493,8 +492,8 @@ class fenics_ConvDiff2D_mass(fenics_ConvDiff2D):
         self.bc.apply(T, b.values.vector())
 
         df.solve(T, u.values.vector(), b.values.vector())
-        
-        self.un=u
+
+        self.un = u
         return u
 
     def eval_f(self, u, t):
@@ -521,15 +520,15 @@ class fenics_ConvDiff2D_mass(fenics_ConvDiff2D):
         self.g.t = t
         fexpl1 = self.dtype_u(df.interpolate(self.g, self.V))
         fexpl1 = self.apply_mass_matrix(fexpl1)
-        
-        a_C = -1.0 * df.inner(df.dot(self.U, df.nabla_grad(self.un.values)), self.v) * df.dx    
+
+        a_C = -1.0 * df.inner(df.dot(self.U, df.nabla_grad(self.un.values)), self.v) * df.dx
         self.C = df.assemble(a_C)
-                
-        fexpl2  = self.dtype_u(self.V) 
+
+        fexpl2 = self.dtype_u(self.V)
         fexpl2.values.vector()[:] = self.C[:]
-        
-        f.expl  = fexpl1 + fexpl2 
-                
+
+        f.expl = fexpl1 + fexpl2
+
         return f
 
     def fix_residual(self, res):
@@ -547,9 +546,9 @@ class fenics_ConvDiff2D_mass(fenics_ConvDiff2D):
 
 # noinspection PyUnusedLocal
 class fenics_ConvDiff2D_mass_timebc(fenics_ConvDiff2D_mass):
-    r"""    
-    This example demonstrates the implementation of a forced two-dimensional convection-diffusion equation using 
-    Dirichlet boundary conditions. The problem considered is a benchmark test with a rotating Gaussian profile.    
+    r"""
+    This example demonstrates the implementation of a forced two-dimensional convection-diffusion equation using
+    Dirichlet boundary conditions. The problem considered is a benchmark test with a rotating Gaussian profile.
 
     The equation we are solving is the two-dimensional convection-diffusion equation:
 
@@ -566,23 +565,23 @@ class fenics_ConvDiff2D_mass_timebc(fenics_ConvDiff2D_mass):
         .. math:`f(x, y, t)` is the source term, representing external forcing or generation of .. math:`u`.
 
     The computational domain for this problem is:
-    
+
     .. math::
          x \in \Omega := [-0.5, 0.5] \times [-0.5, 0.5]
 
     Dirichlet boundary conditions are applied, meaning that the value of .. math:`u` is specified on the boundary of the domain.
     In this benchmark example, the forcing term .. math:`f` is:
-    
+
     .. math::
         f(x,y,t) = 0
-    
-    This implies there are no additional sources or sinks affecting the field .. math:`u`, simplifying the problem to just the 
+
+    This implies there are no additional sources or sinks affecting the field .. math:`u`, simplifying the problem to just the
     effects of convection and diffusion. The analytical solution for the scalar field .. math:`u is given by:
-    
+
     .. math::
-        u(x,y,t) = \frac{\sigma^2}{\sigma^2 + \omega\nu t}*\exp(- \frac{(\hat{x}-x_0)^2 + (\hat{y}-y_0)^2}{\sigma^2 + \omega\nu t} 
-    
-    
+        u(x,y,t) = \frac{\sigma^2}{\sigma^2 + \omega\nu t}*\exp(- \frac{(\hat{x}-x_0)^2 + (\hat{y}-y_0)^2}{\sigma^2 + \omega\nu t}
+
+
     where:
       .. math:`\sigma` is the initial standard deviation of the Gaussian.
       .. math:`\omega` is the angular velocity of the rotation.
@@ -593,16 +592,16 @@ class fenics_ConvDiff2D_mass_timebc(fenics_ConvDiff2D_mass):
           \hat{y} = -\sin(\omega t) x + \cos(\omega t) y
       .. math:`(x_0, y_0)` is the center of the Gaussian, given as .. math:`(-0.25, 0.0)`.
 
- 
+
     The velocity field .. math:`U` for the rotating Gaussian is defined as:
-    
+
     .. math::
         U = (u,v) = (-\omega*y, \omega*x)
-    
-    This represents a counter-clockwise rotation around the origin with angular velocity .. math:`\omega`. 
+
+    This represents a counter-clockwise rotation around the origin with angular velocity .. math:`\omega`.
     The flow causes the scalar field .. math:`u` to be advected in a circular pattern, simulating the rotation of the Gaussian.
-    
-    
+
+
     Parameters
     ----------
     c_nvars : int, optional
@@ -643,7 +642,7 @@ class fenics_ConvDiff2D_mass_timebc(fenics_ConvDiff2D_mass):
         Wells and others. Springer (2012).
     """
 
-    def __init__(self, c_nvars=64, t0=0.0, family='CG', order=2, refinements=1, nu=0.1, c=0.0, sigma =0.05):
+    def __init__(self, c_nvars=64, t0=0.0, family='CG', order=2, refinements=1, nu=0.1, c=0.0, sigma=0.05):
         """Initialization routine"""
 
         # define the Dirichlet boundary
@@ -658,19 +657,16 @@ class fenics_ConvDiff2D_mass_timebc(fenics_ConvDiff2D_mass):
             s=self.sigma,
             nu=self.nu,
             x0=-0.25,
-            y0= 0.0,
+            y0=0.0,
             t=t0,
             degree=self.order,
         )
 
-        
         self.bc = df.DirichletBC(self.V, self.u_D, Boundary)
         self.bc_hom = df.DirichletBC(self.V, df.Constant(0), Boundary)
 
         # set forcing term as expression
         self.g = df.Expression('0', t=self.t0, degree=self.order)
-
-
 
     def solve_system(self, rhs, factor, u0, t):
         r"""
@@ -703,7 +699,7 @@ class fenics_ConvDiff2D_mass_timebc(fenics_ConvDiff2D_mass):
         self.bc.apply(b.values.vector())
 
         df.solve(T, u.values.vector(), b.values.vector())
-        
+
         self.un = u
         return u
 
@@ -728,11 +724,11 @@ class fenics_ConvDiff2D_mass_timebc(fenics_ConvDiff2D_mass):
             s=self.sigma,
             nu=self.nu,
             x0=-0.25,
-            y0= 0.0,
+            y0=0.0,
             t=t,
             degree=self.order,
         )
-        
+
         me = self.dtype_u(df.interpolate(u0, self.V), val=self.V)
 
         return me

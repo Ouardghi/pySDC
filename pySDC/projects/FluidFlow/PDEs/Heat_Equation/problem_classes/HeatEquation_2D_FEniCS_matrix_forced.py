@@ -99,11 +99,11 @@ class fenics_heat2D(Problem):
         df.parameters['allow_extrapolation'] = True
 
         # set mesh and refinement (for multilevel)
-        #mesh = df.UnitIntervalMesh(c_nvars)
-        
-        mesh = df.UnitSquareMesh(c_nvars,c_nvars)
-        
-        #for _ in range(refinements):
+        # mesh = df.UnitIntervalMesh(c_nvars)
+
+        mesh = df.UnitSquareMesh(c_nvars, c_nvars)
+
+        # for _ in range(refinements):
         #    mesh = df.refine(mesh)
 
         # define function space for future reference

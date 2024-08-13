@@ -3,19 +3,21 @@ from pySDC.implementations.sweeper_classes.imex_1st_order import imex_1st_order
 import dolfin as df
 import matplotlib.pyplot as plt
 
+
 class imex_1st_order_mass_NSE(imex_1st_order):
     """
     Custom sweeper class, implements Sweeper.py
 
     First-order IMEX sweeper using implicit/explicit Euler as base integrator, with mass or weighting matrix
     """
+
     def __init__(self, params):
 
         super().__init__(params)
-        
+
         self.gradP = [None] * (self.coll.num_nodes + 1)
-        self.p     = [None] * (self.coll.num_nodes + 1)
-    
+        self.p = [None] * (self.coll.num_nodes + 1)
+
     def integrate_new(self):
         """
         Integrates the right-hand side (here impl + expl)
@@ -23,7 +25,7 @@ class imex_1st_order_mass_NSE(imex_1st_order):
         Returns:
             list of dtype_u: containing the integral as values
         """
-        
+
         # get current level and problem description
         L = self.level
 
@@ -31,19 +33,18 @@ class imex_1st_order_mass_NSE(imex_1st_order):
 
         # integrate RHS over all collocation nodes
         for m in range(1, self.coll.num_nodes + 1):
-            if self.gradP[1] != None :
+            if self.gradP[1] != None:
                 me.append(L.dt * self.coll.Qmat[m, 1] * (L.f[1].impl + L.f[1].expl + self.gradP[1]))
-            else :
+            else:
                 me.append(L.dt * self.coll.Qmat[m, 1] * (L.f[1].impl + L.f[1].expl))
             # new instance of dtype_u, initialize values with 0
             for j in range(2, self.coll.num_nodes + 1):
-                if self.gradP[j] != None :
+                if self.gradP[j] != None:
                     me[m - 1] += L.dt * self.coll.Qmat[m, j] * (L.f[j].impl + L.f[j].expl + self.gradP[j])
                 else:
                     me[m - 1] += L.dt * self.coll.Qmat[m, j] * (L.f[j].impl + L.f[j].expl)
         return me
-        
-        
+
     def update_nodes(self):
         """
         Update the u- and f-values at the collocation nodes -> corresponds to a single sweep over all nodes
@@ -83,7 +84,7 @@ class imex_1st_order_mass_NSE(imex_1st_order):
             # add tau if associated
             if L.tau[m] is not None:
                 integral[m] += L.tau[m]
-        
+
         # do the sweep
         for m in range(0, M):
             # build rhs, consisting of the known values from above and new values from previous nodes (at k+1)
@@ -93,15 +94,19 @@ class imex_1st_order_mass_NSE(imex_1st_order):
 
             # implicit solve with prefactor stemming from QI
             L.uold = L.u.copy()
-            
+
             L.u[m + 1] = P.solve_system(
-                rhs, L.dt * self.QI[m + 1, m + 1], L.u[m + 1], L.time + L.dt * self.coll.nodes[m],L.dt * self.coll.nodes[m] 
+                rhs,
+                L.dt * self.QI[m + 1, m + 1],
+                L.u[m + 1],
+                L.time + L.dt * self.coll.nodes[m],
+                L.dt * self.coll.nodes[m],
             )
-            
+
             # update function values
             L.f[m + 1] = P.eval_f(L.u[m + 1], L.time + L.dt * self.coll.nodes[m])
-            
-            #self.gradP[m + 1] = P.eval_gradP(self.p[m + 1])
+
+            # self.gradP[m + 1] = P.eval_gradP(self.p[m + 1])
 
         # indicate presence of new values at this level
         L.status.updated = True
@@ -128,7 +133,7 @@ class imex_1st_order_mass_NSE(imex_1st_order):
             L.uend = P.dtype_u(L.u[-1])
         else:
             raise NotImplementedError('Mass matrix sweeper expect u_M = u_end')
-        
+
         """
         time = L.time+L.dt
         if(time<=L.dt):
@@ -136,9 +141,9 @@ class imex_1st_order_mass_NSE(imex_1st_order):
             print('Called at time ', time)
         """
         P.WriteFiles(L.uend, L.time)
-        
+
         return None
-    
+
     def compute_residual(self, stage=None):
         """
         Computation of the residual using the collocation matrix Q
@@ -164,10 +169,10 @@ class imex_1st_order_mass_NSE(imex_1st_order):
 
         # build QF(u)
         res_norm = []
-        #res = self.integrate_new()
+        # res = self.integrate_new()
         res = [0] * (self.coll.num_nodes + 1)
         for m in range(self.coll.num_nodes):
-            
+
             # This is somewhat ugly, but we have to apply the mass matrix on u0 only on the finest level
             """
             if L.level_index == 0:
@@ -178,24 +183,24 @@ class imex_1st_order_mass_NSE(imex_1st_order):
             if L.tau[m] is not None:
                 res[m] += L.tau[m]
             """
-            if L.uold[m+1]!= None:
-               res[m] = L.u[m+1]-L.uold[m+1]
+            if L.uold[m + 1] != None:
+                res[m] = L.u[m + 1] - L.uold[m + 1]
             else:
-               res[m] = L.u[m+1]
-           
+                res[m] = L.u[m + 1]
+
             # Due to different boundary conditions we might have to fix the residual
             if L.prob.fix_bc_for_residual:
                 L.prob.fix_residual(res[m])
             # use abs function from data type here
             res_norm.append(abs(res[m]))
-            
+
         # find maximal residual over the nodes
         L.status.residual = max(res_norm)
 
-        if L.time == 0.0 and  L.status.residual == 0.0:
-           L.status.residual = 1.0
+        if L.time == 0.0 and L.status.residual == 0.0:
+            L.status.residual = 1.0
 
         # indicate that the residual has seen the new values
         L.status.updated = False
-       
+
         return None

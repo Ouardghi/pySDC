@@ -81,8 +81,9 @@ class fenics_heat(Problem):
 
     dtype_u = fenics_mesh
     dtype_f = fenics_mesh
-    #dtype_f = rhs_fenics_mesh
+    # dtype_f = rhs_fenics_mesh
     df.set_log_active(False)
+
     def __init__(self, c_nvars=128, t0=0.0, family='CG', order=4, refinements=1, nu=0.1, c=0.0):
         """Initialization routine"""
         self.fix_bc_for_residual = True
@@ -101,9 +102,9 @@ class fenics_heat(Problem):
         df.parameters['allow_extrapolation'] = True
 
         # set mesh and refinement (for multilevel)
-        mesh = df.UnitSquareMesh(c_nvars,c_nvars)
+        mesh = df.UnitSquareMesh(c_nvars, c_nvars)
 
-        #for _ in range(refinements):
+        # for _ in range(refinements):
         #    mesh = df.refine(mesh)
 
         # define function space for future reference
@@ -120,14 +121,14 @@ class fenics_heat(Problem):
         # Stiffness term (Laplace)
         u = df.TrialFunction(self.V)
         v = df.TestFunction(self.V)
-        
+
         self.u = u
         self.v = v
 
         a_K = -1.0 * df.inner(df.nabla_grad(u), self.nu * df.nabla_grad(v)) * df.dx
 
         # Mass term
-        a_M = df.inner(u , v) * df.dx
+        a_M = df.inner(u, v) * df.dx
 
         self.M = df.assemble(a_M)
         self.K = df.assemble(a_K)
@@ -135,20 +136,20 @@ class fenics_heat(Problem):
         # set boundary values
         ue = '0.75-1.0/(4.0*(1+exp(-(4*x[0]-4*x[1]+t)/(32*nu))))'
         ve = '0.75+1.0/(4.0*(1+exp(-(4*x[0]-4*x[1]+t)/(32*nu))))'
-        self.uex = df.Expression((ue, ve), nu = self.nu, t=self.t0, degree = self.order)
+        self.uex = df.Expression((ue, ve), nu=self.nu, t=self.t0, degree=self.order)
 
         dudt = '-1/(512*nu*pow(cosh((t + 4*x[0] - 4*x[1])/(64*nu)),2))'
         dvdt = ' 1/(512*nu*pow(cosh((t + 4*x[0] - 4*x[1])/(64*nu)),2))'
-        self.dUdt = df.Expression((dudt, dvdt), nu = self.nu, t=self.t0, degree = self.order)
+        self.dUdt = df.Expression((dudt, dvdt), nu=self.nu, t=self.t0, degree=self.order)
 
         self.bc = df.DirichletBC(self.V, self.dUdt, Boundary)
         self.bcu = df.DirichletBC(self.V, self.uex, Boundary)
-        self.bc_hom = df.DirichletBC(self.V, df.Constant((0,0)), Boundary)
+        self.bc_hom = df.DirichletBC(self.V, df.Constant((0, 0)), Boundary)
 
         # set forcing term as expression
-        
+
         self.g = df.Expression(
-            ('0','0'),
+            ('0', '0'),
             a=np.pi,
             b=self.nu,
             t=self.t0,
@@ -156,7 +157,7 @@ class fenics_heat(Problem):
         )
 
         self.uold = df.Function(self.V)
-    
+
     def solve_system(self, rhs, factor, u0, t):
         r"""
         Dolfin's linear solver for :math:`(M - factor \cdot A) \vec{u} = \vec{rhs}`.
@@ -179,25 +180,23 @@ class fenics_heat(Problem):
         """
 
         u = self.dtype_u(u0)
-        uapp = rhs.values 
-        
-        self.dUdt.t=t
-        self.g.t=t
-        G0 = self.dtype_f(df.interpolate(self.g, self.V), val=self.V) 
+        uapp = rhs.values
 
-        
-        F  = df.inner(u.values , self.v )* df.dx  
-        F += factor**2*df.inner(df.dot(u.values, df.nabla_grad(u.values)), self.v) * df.dx 
-        F += factor*df.inner(df.dot(u.values, df.nabla_grad(uapp)), self.v) * df.dx 
-        F += factor*df.inner(df.dot(uapp, df.nabla_grad(u.values)), self.v) * df.dx 
-        F += df.inner(df.dot(uapp, df.nabla_grad(uapp)), self.v) * df.dx 
-        F += factor*df.inner(df.nabla_grad(u.values), self.nu * df.nabla_grad(self.v)) * df.dx
+        self.dUdt.t = t
+        self.g.t = t
+        G0 = self.dtype_f(df.interpolate(self.g, self.V), val=self.V)
+
+        F = df.inner(u.values, self.v) * df.dx
+        F += factor**2 * df.inner(df.dot(u.values, df.nabla_grad(u.values)), self.v) * df.dx
+        F += factor * df.inner(df.dot(u.values, df.nabla_grad(uapp)), self.v) * df.dx
+        F += factor * df.inner(df.dot(uapp, df.nabla_grad(u.values)), self.v) * df.dx
+        F += df.inner(df.dot(uapp, df.nabla_grad(uapp)), self.v) * df.dx
+        F += factor * df.inner(df.nabla_grad(u.values), self.nu * df.nabla_grad(self.v)) * df.dx
         F += df.inner(df.nabla_grad(uapp), self.nu * df.nabla_grad(self.v)) * df.dx
-        F += df.inner(G0.values, self.v) * df.dx    
+        F += df.inner(G0.values, self.v) * df.dx
 
-        df.solve(F==0,u.values,self.bc, solver_parameters={"newton_solver":{"absolute_tolerance": 1e-15 }})
+        df.solve(F == 0, u.values, self.bc, solver_parameters={"newton_solver": {"absolute_tolerance": 1e-15}})
 
-                                           
         """
         
         F  = df.inner(u.values, self.v )* df.dx 
@@ -230,26 +229,25 @@ class fenics_heat(Problem):
         f : dtype_f
             The right-hand side divided into two parts.
         """
-        self.g.t=t
+        self.g.t = t
         f = self.dtype_f(self.V)
-        
-        # Diffusive part      
-        diff = -df.inner(self.nu*df.nabla_grad(u.values), df.nabla_grad(self.v))*df.dx
-        
-        # Convective part  
-        conv = df.inner(df.dot(u.values, df.nabla_grad(u.values)), self.v)*df.dx
-         
-        # External forces 
-        frc = df.inner(df.interpolate(self.g, self.V),self.v)*df.dx
 
-        # Time derivative 
-        dudt = df.inner(du.values, self.v)*df.dx
-        
-        g = dudt - diff + conv  - frc
+        # Diffusive part
+        diff = -df.inner(self.nu * df.nabla_grad(u.values), df.nabla_grad(self.v)) * df.dx
+
+        # Convective part
+        conv = df.inner(df.dot(u.values, df.nabla_grad(u.values)), self.v) * df.dx
+
+        # External forces
+        frc = df.inner(df.interpolate(self.g, self.V), self.v) * df.dx
+
+        # Time derivative
+        dudt = df.inner(du.values, self.v) * df.dx
+
+        g = dudt - diff + conv - frc
 
         f.values.vector()[:] = df.assemble(g)[:]
-        #f =  self.__invert_mass_matrix(f)
-        
+        # f =  self.__invert_mass_matrix(f)
 
         return f
 
@@ -312,16 +310,15 @@ class fenics_heat(Problem):
             Exact solution.
         """
 
-        #u0 = df.Expression('sin(a*x[0]) * sin(a*x[1]) * cos(t) + c', c=self.c, a=np.pi, t=t, degree=self.order)
-        
+        # u0 = df.Expression('sin(a*x[0]) * sin(a*x[1]) * cos(t) + c', c=self.c, a=np.pi, t=t, degree=self.order)
+
         u = '0.75-1.0/(4.0*(1+exp(-(4*x[0]-4*x[1]+t)/(32*nu))))'
         v = '0.75+1.0/(4.0*(1+exp(-(4*x[0]-4*x[1]+t)/(32*nu))))'
 
-        u0 = df.Expression((u,v), nu=self.nu, t=t, degree=self.order)    
+        u0 = df.Expression((u, v), nu=self.nu, t=t, degree=self.order)
         me = self.dtype_u(df.interpolate(u0, self.V), val=self.V)
 
         return me
-
 
     def apply_bc(self, u, t):
         """
@@ -332,12 +329,11 @@ class fenics_heat(Problem):
         u   : dtype_u
               Current values of the numerical solution.
         t : float
-            Current time at which the numerical solution is computed.  
+            Current time at which the numerical solution is computed.
         """
-        self.uex.t=t
-        self.bcu.apply(u.values.vector()) 
+        self.uex.t = t
+        self.bcu.apply(u.values.vector())
         return None
-    
 
     def fix_residual(self, res):
         """
@@ -349,17 +345,10 @@ class fenics_heat(Problem):
               Residual
         """
         self.bc_hom.apply(res.values.vector())
-        return None       
-
-
-
-    def OldSolution(self, uold):
-        
-        self.wold = uold.values.copy()
-         
         return None
 
+    def OldSolution(self, uold):
 
+        self.wold = uold.values.copy()
 
-
-
+        return None
