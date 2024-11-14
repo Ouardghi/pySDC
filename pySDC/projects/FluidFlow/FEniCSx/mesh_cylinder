@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<!DOCTYPE Xdmf SYSTEM "Xdmf.dtd" []>
+<Xdmf Version="3.0" xmlns:xi="https://www.w3.org/2001/XInclude">
+  <Domain>
+    <Grid Name="mesh" GridType="Uniform">
+      <Topology TopologyType="Triangle_6" NumberOfElements="1091" NodesPerElement="6">
+        <DataItem Dimensions="1091 6" NumberType="Int" Format="HDF">mesh_cylinder.h5:/Mesh/mesh/topology</DataItem>
+      </Topology>
+      <Geometry GeometryType="XYZ">
+        <DataItem Dimensions="2285 3" Format="HDF">mesh_cylinder.h5:/Mesh/mesh/geometry</DataItem>
+      </Geometry>
+    </Grid>
+    <Grid Name="mesh_cells" GridType="Uniform">
+      <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@Name='mesh']/Geometry)" />
+      <Topology TopologyType="Triangle_6" NumberOfElements="1091" NodesPerElement="6">
+        <DataItem Dimensions="1091 6" NumberType="Int" Format="HDF">mesh_cylinder.h5:/MeshTags/mesh_cells/topology</DataItem>
+      </Topology>
+      <Attribute Name="mesh_cells" AttributeType="Scalar" Center="Cell">
+        <DataItem Dimensions="1091 1" Format="HDF">mesh_cylinder.h5:/MeshTags/mesh_cells/Values</DataItem>
+      </Attribute>
+    </Grid>
+    <Grid Name="mesh_facets" GridType="Uniform">
+      <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@Name='mesh']/Geometry)" />
+      <Topology TopologyType="Edge_3" NumberOfElements="103" NodesPerElement="3">
+        <DataItem Dimensions="103 3" NumberType="Int" Format="HDF">mesh_cylinder.h5:/MeshTags/mesh_facets/topology</DataItem>
+      </Topology>
+      <Attribute Name="mesh_facets" AttributeType="Scalar" Center="Cell">
+        <DataItem Dimensions="103 1" Format="HDF">mesh_cylinder.h5:/MeshTags/mesh_facets/Values</DataItem>
+      </Attribute>
+    </Grid>
+  </Domain>
+</Xdmf>

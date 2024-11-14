@@ -107,7 +107,6 @@ class implicit_NSE(Sweeper):
 
             # implicit solve with prefactor stemming from the diagonal of Qd
             alpha = L.dt * self.QI[m + 1, m + 1]
-            L.uold = L.u.copy()
             if alpha == 0:
                 L.u[m + 1] = rhs
             else:
@@ -178,12 +177,12 @@ class implicit_NSE(Sweeper):
 
         # build QF(u)
         res_norm = []
-        # res = self.integrate()
-        res = [0] * (self.coll.num_nodes + 1)
+        res = self.integrate()
+        #res = [0] * (self.coll.num_nodes + 1)
         for m in range(self.coll.num_nodes):
 
             # This is somewhat ugly, but we have to apply the mass matrix on u0 only on the finest level
-            """
+            
             if L.level_index == 0:
                 res[m] += P.apply_mass_matrix(L.u[0] - L.u[m + 1])
             else:
@@ -191,16 +190,6 @@ class implicit_NSE(Sweeper):
             # add tau if associated
             if L.tau[m] is not None:
                 res[m] += L.tau[m]
-            """
-
-            if L.uold[m + 1] != None:
-                res[m] = L.u[m + 1] - L.uold[m + 1]
-                # res_norm.append(abs(res[m]))
-                # print('Not None')
-            else:
-                res[m] = L.u[m + 1]
-                # res_norm.append(abs(1))
-                # print('None')
 
             # Due to different boundary conditions we might have to fix the residual
             if L.prob.fix_bc_for_residual:

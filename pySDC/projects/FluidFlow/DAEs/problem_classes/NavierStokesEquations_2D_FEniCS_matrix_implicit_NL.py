@@ -148,7 +148,6 @@ class fenics_NSE_monolithic(Problem):
         #
         bc_in_du = df.DirichletBC(self.W.sub(0), self.du_in, inflow)
         bc_in = df.DirichletBC(self.W.sub(0), self.u_in, inflow)
-
         bc_out = df.DirichletBC(self.W.sub(1), 0, outflow)
         bc_walls = df.DirichletBC(self.W.sub(0), (0, 0), walls)
         bc_cylinder = df.DirichletBC(self.W.sub(0), (0, 0), cylinder)
@@ -157,13 +156,11 @@ class fenics_NSE_monolithic(Problem):
         self.bcdu = [bc_cylinder, bc_walls, bc_out, bc_in_du]
         #
 
-        # Homogen boundary conditions for the residual
-        self.bc_hom = df.DirichletBC(self.V, df.Constant((0, 0)), Boundary)
-
+        # Homogen boundary conditions for the residual     
         bc_hom_u = df.DirichletBC(self.W.sub(0), df.Constant((0, 0)), Boundary)
         bc_hom_p = df.DirichletBC(self.W.sub(1), df.Constant(0), Boundary)
-
-        self.bc_hom2 = [bc_hom_u, bc_hom_p]
+        #
+        self.bc_hom = [bc_hom_u, bc_hom_p]
 
         # set forcing term as expression
         self.g = df.Expression(('0', '0'), a=np.pi, b=self.nu, t=self.t0, degree=self.order)
@@ -171,8 +168,6 @@ class fenics_NSE_monolithic(Problem):
         path = 'data/data_N4_dt_0025_MIN_SR_S/'
         self.xdmffile_p = df.XDMFFile(path + 'Cylinder_pressure.xdmf')
         self.xdmffile_u = df.XDMFFile(path + 'Cylinder_velocity.xdmf')
-
-        self.wold = df.Function(self.W)
 
     def solve_system(self, rhs, factor, u0, t):
         r"""
@@ -194,35 +189,37 @@ class fenics_NSE_monolithic(Problem):
         u : dtype_u
             Solution.
         """
-
-        w = self.dtype_u(u0)
-        # u,p = df.split(w.values)
-
-        u = self.u
-        p = self.p
-
-        uapp, papp = df.split(df.project(rhs.values, self.W))
-        uold, pold = df.split(self.wold)
-
+        
         # update time in Boundary conditions
         self.du_in.t = t
 
         # Get the forcing term
         self.g.t = t
         G0 = self.dtype_f(df.interpolate(self.g, self.V), val=self.V)
+        w = self.dtype_u(u0)
+        # u,p = df.split(w.values)
 
-        F = df.dot(u, self.v) * df.dx
-        F += factor * df.dot(df.dot(u, df.nabla_grad(uold)), self.v) * df.dx
-        F += df.dot(df.dot(uapp, df.nabla_grad(uold)), self.v) * df.dx
-        F += factor * df.dot(df.dot(uold, df.nabla_grad(u)), self.v) * df.dx
-        F += df.dot(df.dot(uold, df.nabla_grad(uapp)), self.v) * df.dx
-        F -= df.dot(df.dot(uold, df.nabla_grad(uold)), self.v) * df.dx
+        u = self.u
+        p = self.p
+        
+        uapp, papp = df.split(df.project(rhs.values, self.W))
+        uold, pold = df.split(u0.values)
+
+        # Weak formulation
+        F = df.inner(u, self.v) * df.dx
+        F += factor**2 * df.inner(df.dot(u, df.nabla_grad(uold)), self.v) * df.dx
+        F += factor**2 * df.inner(df.dot(uold, df.nabla_grad(u)), self.v) * df.dx
+        F -= factor**2 * df.inner(df.dot(uold, df.nabla_grad(uold)), self.v) * df.dx
+        F += factor * df.inner(df.dot(u, df.nabla_grad(uapp)), self.v) * df.dx
+        F += factor * df.inner(df.dot(uapp, df.nabla_grad(u)), self.v) * df.dx
+        F += df.inner(df.dot(uapp, df.nabla_grad(uapp)), self.v) * df.dx
         F += self.nu * factor * df.inner(df.nabla_grad(u), df.nabla_grad(self.v)) * df.dx
         F += self.nu * df.inner(df.nabla_grad(uapp), df.nabla_grad(self.v)) * df.dx
-        F += df.dot(G0.values, self.v) * df.dx
-        F -= df.dot(p, df.div(self.v)) * df.dx
-        F -= factor * df.dot(df.div(u), self.q) * df.dx
-        F -= df.dot(df.div(uapp), self.q) * df.dx
+        F += df.inner(G0.values, self.v) * df.dx
+        F += -1.0 * df.inner(p, df.div(self.v)) * df.dx
+        F += -1.0 * factor * df.inner(df.div(u), self.q) * df.dx
+        F += -1.0 * df.inner(df.div(uapp), self.q) * df.dx
+
 
         L = df.lhs(F)
         R = df.rhs(F)
@@ -276,12 +273,11 @@ class fenics_NSE_monolithic(Problem):
 
         # Time derivative
         dudt = df.inner(du1, self.v) * df.dx
+        
 
-        g = dudt - diff + conv - grad - frc - incom
+        F = dudt - diff + conv - grad - frc - incom
 
-        f.values.vector()[:] = df.assemble(g)[:]
-
-        [bc.apply(f.values.vector()) for bc in self.bc_hom2]
+        f.values.vector()[:] = df.assemble(F)[:]
 
         return f
 
@@ -347,37 +343,9 @@ class fenics_NSE_monolithic(Problem):
         res : dtype_u
               Residual
         """
-        # [bc.apply(res.values.vector()) for bc in self.bc_hom]
-        self.bc_hom.apply(res.values.vector())
-        return None
 
-    def apply_bc(self, u, t):
-        """
-        Applies boundary conditions to the solution
-
-        Parameters
-        ----------
-        u   : dtype_u
-              Current values of the numerical solution.
-        t : float
-            Current time at which the numerical solution is computed.
-        """
-        self.u_in.t = t
-        [bc.apply(u.values.vector()) for bc in self.bcu]
-        return None
-
-    def Residual(self, u, uold):
-
-        u, p = df.split(u.values)
-        uo, po = df.split(uold.values)
-        Res = self.dtype_u(df.project(u - uo, self.V), val=self.V)
-        self.bc_hom.apply(Res.values.vector())
-        return Res
-
-    def OldSolution(self, uold):
-
-        self.wold = uold.values.copy()
-
+        [bc.apply(res.values.vector()) for bc in self.bc_hom]
+        
         return None
 
     def WriteFiles(self, up, dup, t):

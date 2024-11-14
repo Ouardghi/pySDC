@@ -21,8 +21,9 @@ def main():
     # of the 'pySDC' folder  and the working directory
     # path0 = Get_pySDC_Path()
     # Add the data directory to the path
+    datapath = '/home/ouardghi/Desktop/pySDC_data/'
 
-    path = 'data/dataLin/data_N4_dt_0.01_LU/'
+    path = datapath + 'PDEs/' + 'data/dataLin/data_N4_dt_0.01_LU/'
 
     '''
     # load parameters 
@@ -39,7 +40,7 @@ def main():
 
     # Get the time-step and final time of the simulation
     dt = 1 / 100
-    Tend = 0.1
+    Tend = 8.0
     # Get problem parameters
     c_nvars = 128
     mu = 0.001

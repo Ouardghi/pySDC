@@ -30,7 +30,7 @@ def run_simulation(mass=None):
 
     # initialize level parameters
     level_params = dict()
-    level_params['restol'] = 1e-9
+    level_params['restol'] = 1e-10
     level_params['dt'] = dt
 
     # initialize step parameters
@@ -46,6 +46,7 @@ def run_simulation(mass=None):
     # sweeper_params['QI'] = ['MIN']
     # sweeper_params['QI'] = ['MIN-SR-NS']
     # sweeper_params['QI'] = ['MIN-SR-S']
+    # sweeper_params['QI'] = ['MIN-SR-FLEX']
 
     problem_params = dict()
     problem_params['nu'] = 0.001

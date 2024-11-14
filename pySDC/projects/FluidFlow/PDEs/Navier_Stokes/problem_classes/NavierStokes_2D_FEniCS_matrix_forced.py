@@ -600,8 +600,6 @@ class fenics_NSE_2D_mass_timebc(fenics_NSE_2D_mass):
         self.xdmffile_p = df.XDMFFile(path + 'Cylinder_pressure.xdmf')
         self.xdmffile_u = df.XDMFFile(path + 'Cylinder_velocity.xdmf')
 
-        self.un = df.Function(self.V)
-        # self.un = self.u_exact(t0)
         self.pn = df.Function(self.Q)
 
     def solve_system(self, rhs, factor, u0, t, dtm):
@@ -651,8 +649,6 @@ class fenics_NSE_2D_mass_timebc(fenics_NSE_2D_mass):
         [bc.apply(M, Rhs3) for bc in self.bcu]
         df.solve(M, u.values.vector(), Rhs3)
         #
-
-        self.un = u
         self.pn = p
 
         return u

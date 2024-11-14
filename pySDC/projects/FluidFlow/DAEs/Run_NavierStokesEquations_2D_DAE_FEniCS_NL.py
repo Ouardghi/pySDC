@@ -29,7 +29,7 @@ def setup(t0=None):
 
     # initialize level parameters
     level_params = dict()
-    level_params['restol'] = 5e-10
+    level_params['restol'] = 1e-10
     level_params['dt'] = 0.01
 
     # initialize step parameters

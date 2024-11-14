@@ -89,7 +89,7 @@ class fenics_NSE_monolithic(Problem):
 
     def __init__(self, c_nvars=128, t0=0.0, family='CG', order=2, refinements=1, nu=0.1, c=0.0):
         """Initialization routine"""
-        self.fix_bc_for_residual = False
+        self.fix_bc_for_residual = True
 
         # define the Dirichlet boundary
         def Boundary(x, on_boundary):
@@ -162,12 +162,10 @@ class fenics_NSE_monolithic(Problem):
         #
 
         # Homogen boundary conditions for the residual
-        self.bc_hom = df.DirichletBC(self.V, df.Constant((0, 0)), Boundary)
-
         bc_hom_u = df.DirichletBC(self.W.sub(0), df.Constant((0, 0)), Boundary)
         bc_hom_p = df.DirichletBC(self.W.sub(1), df.Constant(0), Boundary)
 
-        self.bc_hom2 = [bc_hom_u, bc_hom_p]
+        self.bc_hom = [bc_hom_u, bc_hom_p]
 
         # set forcing term as expression
         self.g = df.Expression(('0', '0'), a=np.pi, b=self.nu, t=self.t0, degree=self.order)
@@ -270,13 +268,11 @@ class fenics_NSE_monolithic(Problem):
         # Time derivative
         dudt = df.inner(du1, self.v) * df.dx
 
-        g = dudt - diff + conv - grad - frc - incom
+        F = dudt - diff + conv - grad - frc - incom
 
-        f.values.vector()[:] = df.assemble(g)[:]
+        f.values.vector()[:] = df.assemble(F)[:]
 
-        [bc.apply(f.values.vector()) for bc in self.bc_hom2]
-
-        return f  # self.apply_mass_matrix(f)
+        return f 
 
     def apply_mass_matrix(self, u):
         r"""
@@ -340,36 +336,8 @@ class fenics_NSE_monolithic(Problem):
         res : dtype_u
               Residual
         """
-        # [bc.apply(res.values.vector()) for bc in self.bc_hom]
-        self.bc_hom.apply(res.values.vector())
-        return None
-
-    def apply_bc(self, u, t):
-        """
-        Applies boundary conditions to the solution
-
-        Parameters
-        ----------
-        u   : dtype_u
-              Current values of the numerical solution.
-        t : float
-            Current time at which the numerical solution is computed.
-        """
-        self.u_in.t = t
-        [bc.apply(u.values.vector()) for bc in self.bcu]
-        return None
-
-    def Residual(self, u, uold):
-
-        u, p = df.split(u.values)
-        uo, po = df.split(uold.values)
-        Res = self.dtype_u(df.project(u - uo, self.V), val=self.V)
-        self.bc_hom.apply(Res.values.vector())
-        return Res
-
-    def OldSolution(self, uold):
-
-        self.wold = uold.values.copy()
+        
+        [bc.apply(res.values.vector()) for bc in self.bc_hom]
 
         return None
 

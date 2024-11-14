@@ -3,7 +3,7 @@ from scipy import optimize
 
 from pySDC.core.errors import ParameterError
 from pySDC.implementations.sweeper_classes.generic_implicit import generic_implicit
-from pySDC.projects.DAE.misc.DAEMesh import DAEMesh
+#from pySDC.projects.DAE.misc.DAEMesh import DAEMesh
 
 import dolfin as df
 import matplotlib.pyplot as plt
@@ -97,7 +97,6 @@ class fully_implicit_DAE(generic_implicit):
             L.f[m] = P.solve_system(u_approx, L.dt * self.QI[m, m], L.f[m], L.time + L.dt * self.coll.nodes[m - 1])
 
         # Update solution approximation
-        L.uold = L.u.copy()
         integral = self.integrate()
         for m in range(M):
             L.u[m + 1] = L.u[0] + integral[m]
@@ -171,18 +170,15 @@ class fully_implicit_DAE(generic_implicit):
         # compute the residual for each node
         res_norm = []
         for m in range(self.coll.num_nodes):
-            # use abs function from data type here
-
+        
+            # Compute the residual using the f 
             res = P.eval_f(L.u[m + 1], L.f[m + 1], L.time + L.dt * self.coll.nodes[m])
+            # Due to different boundary conditions we might have to fix the residual
+            if L.prob.fix_bc_for_residual:
+                L.prob.fix_residual(res)
+                
+            # use abs function from data type here
             res_norm.append(abs(res))
-            """       
-            if L.uold[m+1]!= None:               
-               res = P.Residual(L.u[m+1], L.uold[m+1])
-               #res = L.u[m+1] - L.uold[m+1]
-               res_norm.append(abs(res))
-            else:
-               res_norm.append(1.0)
-            """
 
         # find maximal residual over the nodes
         if L.params.residual_type == 'full_abs':
@@ -222,7 +218,5 @@ class fully_implicit_DAE(generic_implicit):
         super().compute_end_point()
 
         L = self.level
-
-        # L.prob.apply_bc(L.uend, L.time + L.dt)
         L.prob.WriteFiles(L.uend, L.f[-1], L.time + L.dt)
-        L.prob.OldSolution(L.uend)
+        

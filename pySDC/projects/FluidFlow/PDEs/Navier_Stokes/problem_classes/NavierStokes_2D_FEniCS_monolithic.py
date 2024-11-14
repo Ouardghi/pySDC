@@ -2,7 +2,6 @@ import logging
 
 import dolfin as df
 import numpy as np
-from mshr import *
 
 import matplotlib.pyplot as plt
 
@@ -87,7 +86,7 @@ class fenics_NSE_2D_Monolithic(Problem):
 
     def __init__(self, c_nvars=64, t0=0.0, family='CG', order=2, refinements=1, nu=0.001, c=0.0, sigma=0.05):
         """Initialization routine"""
-        self.fix_bc_for_residual = False
+        self.fix_bc_for_residual = True
 
         # define the Dirichlet boundary
         def Boundary(x, on_boundary):
@@ -210,8 +209,8 @@ class fenics_NSE_2D_Monolithic(Problem):
         self.u_in.t = t
 
         # Get the forcing term
-        # self.g.t = t
-        # G0 = self.dtype_f(df.interpolate(self.g, self.V), val=self.V)
+        self.g.t = t
+        G0 = self.dtype_f(df.interpolate(self.g, self.V), val=self.V)
 
         F = df.dot(self.u, self.v) * df.dx
         F += factor * df.dot(df.dot(self.u, df.nabla_grad(uold)), self.v) * df.dx
@@ -219,7 +218,7 @@ class fenics_NSE_2D_Monolithic(Problem):
         F -= factor * df.dot(df.dot(uold, df.nabla_grad(uold)), self.v) * df.dx
         F += factor * self.nu * df.inner(df.nabla_grad(self.u), df.nabla_grad(self.v)) * df.dx
         F -= factor * df.dot(self.p, df.div(self.v)) * df.dx
-        # F -= factor*df.dot(G0.values, self.v) * df.dx
+        F -= factor*df.dot(G0.values, self.v) * df.dx
         F -= factor * df.dot(df.div(self.u), self.q) * df.dx
 
         A = df.assemble(df.lhs(F))
@@ -256,13 +255,13 @@ class fenics_NSE_2D_Monolithic(Problem):
         u, p = df.split(w.values)
 
         # Get the forcing term
-        # self.g.t = t
-        # G0 = self.dtype_f(df.interpolate(self.g, self.V), val=self.V)
+        self.g.t = t
+        G0 = self.dtype_f(df.interpolate(self.g, self.V), val=self.V)
 
         F = -1.0 * df.dot(df.dot(u, df.nabla_grad(u)), self.v) * df.dx
         F -= self.nu * df.inner(df.nabla_grad(u), df.nabla_grad(self.v)) * df.dx
         F += df.dot(p, df.div(self.v)) * df.dx
-        # F += df.dot(G0.values, self.v) * df.dx
+        F += df.dot(G0.values, self.v) * df.dx
         F += df.dot(df.div(u), self.q) * df.dx
 
         # f = self.dtype_f(df.assemble(F))
@@ -358,7 +357,8 @@ class fenics_NSE_2D_Monolithic(Problem):
         res : dtype_u
               Residual
         """
-        self.bc_hom.apply(res.values.vector())
+        [bc.apply(res.values.vector()) for bc in self.bc_hom2]
+                
         return None
 
     def WriteFiles(self, w, t):
