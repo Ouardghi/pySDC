@@ -173,7 +173,7 @@ jobs:
   user_firedrake_tests:
     runs-on: ubuntu-latest
     container:
-      image: firedrakeproject/firedrake-vanilla:2025-01
+      image: firedrakeproject/firedrake-vanilla:latest
       options: --user root
       volumes:
         - ${{ github.workspace }}:/repositories
@@ -205,7 +205,7 @@ jobs:
           firedrake-clean
           cd ./pySDC
           coverage run -m pytest --continue-on-collection-errors -v --durations=0 /repositories/pySDC/pySDC/tests -m firedrake
-        timeout-minutes: 120
+        timeout-minutes: 45
       - name: Make coverage report
         run: |
           . /home/firedrake/firedrake/bin/activate
