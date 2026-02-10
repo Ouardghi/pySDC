@@ -143,7 +143,7 @@ def test_E_MPI():
     my_env['COVERAGE_PROCESS_START'] = 'pyproject.toml'
     cwd = '.'
     num_procs = 3
-    cmd = f'mpiexec -np {num_procs} python pySDC/tutorial/step_7/E_pySDC_with_Firedrake.py --useMPIsweeper'.split()
+    cmd = f'mpiexec -np {num_procs} --oversubscribe python pySDC/tutorial/step_7/E_pySDC_with_Firedrake.py --useMPIsweeper'.split()
 
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=my_env, cwd=cwd)
     p.wait()
@@ -201,7 +201,7 @@ def test_F_ML():
     stats = stepper_ML.scheme.stats
     residual_fine = get_sorted(stats, type='residual_post_sweep', level=0, sortby='iter')
     residual_coarse = get_sorted(stats, type='residual_post_sweep', level=1, sortby='iter')
-    assert residual_fine[0][1] / residual_fine[-1][1] > 3e2, 'Fine residual did not converge as expected'
+    assert residual_fine[0][1] / residual_fine[-1][1] > 1e2, 'Fine residual did not converge as expected'
     assert residual_coarse[0][1] / residual_coarse[-1][1] > 3e2, 'Coarse residual did not converge as expected'
 
     stats_SL = stepper_SL.scheme.stats

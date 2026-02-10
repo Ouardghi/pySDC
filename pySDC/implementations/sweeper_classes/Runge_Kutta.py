@@ -125,12 +125,13 @@ class RungeKutta(Sweeper):
     The entries of the Butcher tableau are stored as class attributes.
     """
 
-    def __init__(self, params):
+    def __init__(self, params, level):
         """
         Initialization routine for the custom sweeper
 
         Args:
             params: parameters for the sweeper
+            level (pySDC.Level.level): the level that uses this sweeper
         """
         # set up logger
         self.logger = logging.getLogger('sweeper')
@@ -156,8 +157,9 @@ class RungeKutta(Sweeper):
 
         self.params = _Pars(params)
 
-        # This will be set as soon as the sweeper is instantiated at the level
+        # set level using the setter in order to adapt residual tolerance if needed
         self.__level = None
+        self.level = level
 
         self.parallelizable = False
         self.QI = self.coll.Qmat
@@ -277,16 +279,16 @@ class RungeKutta(Sweeper):
             lvl.uend = lvl.prob.dtype_u(lvl.u[-1])
             if type(self.coll) == ButcherTableauEmbedded:
                 self.u_secondary = lvl.prob.dtype_u(lvl.u[0])
-                for w2, k in zip(self.coll.weights[1], lvl.f[1:]):
+                for w2, k in zip(self.coll.weights[1], lvl.f[1:], strict=True):
                     self.u_secondary += lvl.dt * w2 * k
         else:
             lvl.uend = lvl.prob.dtype_u(lvl.u[0])
             if type(self.coll) == ButcherTableau:
-                for w, k in zip(self.coll.weights, lvl.f[1:]):
+                for w, k in zip(self.coll.weights, lvl.f[1:], strict=True):
                     lvl.uend += lvl.dt * w * k
             elif type(self.coll) == ButcherTableauEmbedded:
                 self.u_secondary = lvl.prob.dtype_u(lvl.u[0])
-                for w1, w2, k in zip(self.coll.weights[0], self.coll.weights[1], lvl.f[1:]):
+                for w1, w2, k in zip(self.coll.weights[0], self.coll.weights[1], lvl.f[1:], strict=True):
                     lvl.uend += lvl.dt * w1 * k
                     self.u_secondary += lvl.dt * w2 * k
 
@@ -343,14 +345,15 @@ class RungeKuttaIMEX(RungeKutta):
     weights_explicit = None
     ButcherTableauClass_explicit = ButcherTableau
 
-    def __init__(self, params):
+    def __init__(self, params, level):
         """
         Initialization routine
 
         Args:
             params: parameters for the sweeper
+            level (pySDC.Level.level): the level that uses this sweeper
         """
-        super().__init__(params)
+        super().__init__(params, level)
         type(self).weights_explicit = self.weights if self.weights_explicit is None else self.weights_explicit
         self.coll_explicit = self.get_Butcher_tableau_explicit()
         self.QE = self.coll_explicit.Qmat
@@ -456,12 +459,12 @@ class RungeKuttaIMEX(RungeKutta):
             lvl.uend = lvl.u[-1]
             if type(self.coll) == ButcherTableauEmbedded:
                 self.u_secondary = lvl.prob.dtype_u(lvl.u[0])
-                for w2, w2E, k in zip(self.coll.weights[1], self.coll_explicit.weights[1], lvl.f[1:]):
+                for w2, w2E, k in zip(self.coll.weights[1], self.coll_explicit.weights[1], lvl.f[1:], strict=True):
                     self.u_secondary += lvl.dt * (w2 * k.impl + w2E * k.expl)
         else:
             lvl.uend = lvl.prob.dtype_u(lvl.u[0])
             if type(self.coll) == ButcherTableau:
-                for w, wE, k in zip(self.coll.weights, self.coll_explicit.weights, lvl.f[1:]):
+                for w, wE, k in zip(self.coll.weights, self.coll_explicit.weights, lvl.f[1:], strict=True):
                     lvl.uend += lvl.dt * (w * k.impl + wE * k.expl)
             elif type(self.coll) == ButcherTableauEmbedded:
                 self.u_secondary = lvl.u[0].copy()
@@ -471,6 +474,7 @@ class RungeKuttaIMEX(RungeKutta):
                     self.coll_explicit.weights[0],
                     self.coll_explicit.weights[1],
                     lvl.f[1:],
+                    strict=True,
                 ):
                     lvl.uend += lvl.dt * (w1 * k.impl + w1E * k.expl)
                     self.u_secondary += lvl.dt * (w2 * k.impl + w2E * k.expl)
@@ -504,6 +508,21 @@ class IMEXEuler(RungeKuttaIMEX):
 
     matrix = BackwardEuler.matrix
     matrix_explicit = ForwardEuler.matrix
+
+
+class IMEXEulerStifflyAccurate(RungeKuttaIMEX):
+    """
+    This implements u = fI^-1(u0 + fE(u0)) rather than u = fI^-1(u0) + fE(u0) + u0.
+    This implementation is slightly inefficient with two stages, but the last stage is the solution, making it stiffly
+    accurate and suitable for some DAEs.
+    """
+
+    nodes = np.array([0, 1])
+    weights = np.array([0, 1])
+    weights_explicit = np.array([1, 0])
+
+    matrix = np.array([[0, 0], [0, 1]])
+    matrix_explicit = np.array([[0, 0], [1, 0]])
 
 
 class CrankNicolson(RungeKutta):

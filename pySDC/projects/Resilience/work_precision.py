@@ -301,7 +301,7 @@ def record_work_precision(
             exponents = [-2, -1, 0, 1, 2, 3][::-1]
         if problem.__name__ == 'run_Lorenz':
             exponents = [0, 1, 2, 3][::-1]
-            if type(strategy).__name__ in ["AdaptivityStrategy"]:
+            if type(strategy).__name__ in ["AdaptivityStrategy", "ESDIRKStrategy", "ERKStrategy"]:
                 exponents = [0, 1, 2, 3, 4, 5][::-1]
     elif param == 'dt':
         power = 2.0
@@ -577,6 +577,20 @@ def plot_work_precision(
                     '',
                 ]
                 * 7,
+                minor=True,
+            )
+    elif problem.__name__ == 'run_Lorenz':
+        if mode == 'parallel_efficiency_dt_k':
+            ax.set_xticks(
+                ticks=[
+                    0.1,
+                    0.2,
+                    0.3,
+                    0.4,
+                    5e-1,
+                    6e-1,
+                ],
+                labels=['', r'$2\times 10^{-1}$', '', r'$4\times 10^{-1}$', '', ''],
                 minor=True,
             )
 
@@ -945,28 +959,16 @@ def get_configs(mode, problem):
             'strategies': RK_strategies,
             'num_procs': 1,
         }
-        if problem.__name__ == 'run_Lorenz':
-            configurations[3] = {
-                'custom_description': desc_poly,
-                'strategies': [AdaptivityPolynomialError(useMPI=True, newton_inexactness=newton_inexactness)],
-                'num_procs': 4,
-                'num_procs_sweeper': num_procs_dt_k,
-                'plotting_params': {
-                    'label': rf'$\Delta t$-$k$-adaptivity $N$=4x{num_procs_dt_k}',
-                    'ls': ls[num_procs_dt_k * 4],
-                },
-            }
-        else:
-            configurations[3] = {
-                'custom_description': desc_poly,
-                'strategies': [AdaptivityPolynomialError(useMPI=True, newton_inexactness=newton_inexactness)],
-                'num_procs': 1,
-                'num_procs_sweeper': num_procs_dt_k,
-                'plotting_params': {
-                    'label': rf'$\Delta t$-$k$-adaptivity $N$=1x{num_procs_dt_k}',
-                    'ls': ls[num_procs_dt_k],
-                },
-            }
+        configurations[3] = {
+            'custom_description': desc_poly,
+            'strategies': [AdaptivityPolynomialError(useMPI=True, newton_inexactness=newton_inexactness)],
+            'num_procs': 1,
+            'num_procs_sweeper': num_procs_dt_k,
+            'plotting_params': {
+                'label': rf'$\Delta t$-$k$-adaptivity $N$=1x{num_procs_dt_k}',
+                'ls': ls[num_procs_dt_k],
+            },
+        }
         if problem.__name__ in ['run_Lorenz']:
             configurations[2] = {
                 'strategies': [AdaptivityStrategy(useMPI=True)],
@@ -1201,7 +1203,7 @@ def get_configs(mode, problem):
         QI = {
             (1, 3, 'run_Lorenz'): 'MIN-SR-NS',
             (1, 1, 'run_Lorenz'): 'MIN-SR-NS',
-            (4, 1, 'run_Lorenz'): 'IE',
+            (4, 1, 'run_Lorenz'): 'MIN-SR-NS',
         }
 
         newton_inexactness = False if problem.__name__ in ['run_vdp'] else True
@@ -1248,7 +1250,7 @@ def get_configs(mode, problem):
 
         i = 0
         for interpolate_between_restarts, handle, ls in zip(
-            [True, False], ['Interpolation between restarts', 'regular'], ['--', '-']
+            [True, False], ['Interpolation between restarts', 'regular'], ['--', '-'], strict=True
         ):
             configurations[i] = {
                 'strategies': [
@@ -1273,7 +1275,7 @@ def get_configs(mode, problem):
 
         for parallel in [False, True]:
             desc = {'sweeper_class': parallel_sweeper} if parallel else {}
-            for num_nodes, ls in zip([3, 4, 2], ['-', '--', ':', '-.']):
+            for num_nodes, ls in zip([3, 4, 2], ['-', '--', ':', '-.'], strict=True):
                 configurations[num_nodes + (99 if parallel else 0)] = {
                     'custom_description': {**desc, 'sweeper_params': {'num_nodes': num_nodes}},
                     'strategies': [
@@ -1360,7 +1362,11 @@ def get_configs(mode, problem):
                 'MIN-SR-S',
                 # 'MIN-SR-FLEX',
             ],
-            [9991, 12123127391, 1231723109247102731092],
+            [
+                9991,
+                # 12123127391, 1231723109247102731092
+            ],
+            strict=True,
         ):
             configurations[i] = {
                 'custom_description': {
@@ -1760,7 +1766,7 @@ def all_problems(
             _ncols = ncols.get(mode, None)
 
         if shared_params['work_key'] == 'param':
-            for ax, prob in zip(fig.get_axes(), problems):
+            for ax, prob in zip(fig.get_axes(), problems, strict=True):
                 add_param_order_lines(ax, prob)
         save_fig(
             fig=fig,
@@ -1959,7 +1965,7 @@ def aggregate_parallel_efficiency_plot():  # pragma: no cover
 
     num_procs_sweeper_list = [2, 3, 4]
 
-    for problem, ax in zip([run_vdp, run_Lorenz, run_quench], axs.flatten()):
+    for problem, ax in zip([run_vdp, run_Lorenz, run_quench], axs.flatten(), strict=True):
         speedup = []
         for num_procs_sweeper in num_procs_sweeper_list:
             s, e = plot_parallel_efficiency_diagonalSDC(

@@ -5,6 +5,8 @@
 [![fair-software.eu](https://img.shields.io/badge/fair--software.eu-%E2%97%8F%20%20%E2%97%8F%20%20%E2%97%8F%20%20%E2%97%8F%20%20%E2%97%8F-green)](https://fair-software.eu)
 [![SQAaaS badge shields.io](https://img.shields.io/badge/sqaaas%20software-silver-lightgrey)](https://api.eu.badgr.io/public/assertions/aS8J0NDTTjCyYP6iVufviQ "SQAaaS silver badge achieved")
 [![PyPI - Downloads](https://img.shields.io/pypi/dm/pySDC?logo=pypi)](https://pypistats.org/packages/pysdc)
+[![HiRSE Code Promo Badge](https://img.shields.io/badge/Promo-8db427?label=HiRSE&labelColor=005aa0&link=https%3A%2F%2Fgo.fzj.de%2FCodePromo)](https://go.fzj.de/CodePromo)
+[![SWH](https://archive.softwareheritage.org/badge/origin/https://github.com/Parallel-in-Time/pySDC/)](https://archive.softwareheritage.org/browse/origin/?origin_url=https://github.com/Parallel-in-Time/pySDC)
 
 # Welcome to pySDC!
 
@@ -31,9 +33,8 @@ implemented.
     [PETSc](http://www.mcs.anl.gov/petsc/) (through
     [petsc4py](https://bitbucket.org/petsc/petsc4py))
 -   Continuous integration via [GitHub
-    Actions](https://github.com/Parallel-in-Time/pySDC/actions) and
-    [Gitlab CI](https://gitlab.hzdr.de/r.speck/pysdc/-/pipelines) (through the [GitHub2Gitlab Action](https://github.com/jakob-fritz/github2lab_action))
--   Fully compatible with Python 3.9 - 3.12, runs at least on Ubuntu
+    Actions](https://github.com/Parallel-in-Time/pySDC/actions)
+-   Fully compatible with Python 3.10 - 3.13, runs at least on Ubuntu
 
 ## Getting started
 
@@ -112,13 +113,13 @@ Any contribution is dearly welcome! If you want to contribute, please take the t
 This project has received funding from the [European High-Performance
 Computing Joint Undertaking](https://eurohpc-ju.europa.eu/) (JU) under
 grant agreement No 955701 ([TIME-X](https://www.time-x-eurohpc.eu/))
-and grant agreement No 101118139.
+and grant agreement No 101118139. 
 The JU receives support from the European Union's Horizon 2020 research
 and innovation programme and Belgium, France, Germany, and Switzerland.
 This project also received funding from the [German Federal Ministry of
 Education and Research](https://www.bmbf.de/bmbf/en/home/home_node.html)
 (BMBF) grants  16HPC047 and 16ME0679K. Supported by the European Union - NextGenerationEU. 
-The project also received help from the [Helmholtz Platform for Research Software Engineering - Preparatory Study (HiRSE_PS)](https://www.helmholtz-hirse.de/).
+The project also received help from the [Joint Lab "Helmholtz Information -  Research Software Engineering" (HiRSE)](https://www.helmholtz-hirse.de/).
 
 <p align="center">
   <img src="./docs/img/EuroHPC.jpg" height="105"/> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;

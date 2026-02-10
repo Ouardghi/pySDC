@@ -1,6 +1,7 @@
 import logging
 import os
 import sys
+from typing import Any, Dict, List, Optional, Type, Union
 import numpy as np
 
 from pySDC.core.base_transfer import BaseTransfer
@@ -12,15 +13,15 @@ from pySDC.implementations.hooks.log_timings import CPUTimings
 
 # short helper class to add params as attributes
 class _Pars(FrozenClass):
-    def __init__(self, params):
-        self.mssdc_jac = True
-        self.predict_type = None
-        self.all_to_done = False
-        self.logger_level = 20
-        self.log_to_file = False
-        self.dump_setup = True
-        self.fname = 'run_pid' + str(os.getpid()) + '.log'
-        self.use_iteration_estimator = False
+    def __init__(self, params: Dict[str, Any]) -> None:
+        self.mssdc_jac: bool = True
+        self.predict_type: Optional[str] = None
+        self.all_to_done: bool = False
+        self.logger_level: int = 20
+        self.log_to_file: bool = False
+        self.dump_setup: bool = True
+        self.fname: str = 'run_pid' + str(os.getpid()) + '.log'
+        self.use_iteration_estimator: bool = False
 
         for k, v in params.items():
             setattr(self, k, v)
@@ -33,18 +34,21 @@ class Controller(object):
     Base abstract controller class
     """
 
-    def __init__(self, controller_params, description, useMPI=None):
+    def __init__(
+        self, controller_params: Dict[str, Any], description: Dict[str, Any], useMPI: Optional[bool] = None
+    ) -> None:
         """
         Initialization routine for the base controller
 
         Args:
             controller_params (dict): parameter set for the controller and the steps
         """
-        self.useMPI = useMPI
+        self.useMPI: Optional[bool] = useMPI
+        self.description: Dict[str, Any] = description
 
         # check if we have a hook on this list. If not, use default class.
-        self.__hooks = []
-        hook_classes = [DefaultHooks, CPUTimings]
+        self.__hooks: List[Any] = []
+        hook_classes: List[Type[Any]] = [DefaultHooks, CPUTimings]
         user_hooks = controller_params.get('hook_class', [])
         hook_classes += user_hooks if type(user_hooks) == list else [user_hooks]
         [self.add_hook(hook) for hook in hook_classes]
@@ -53,19 +57,21 @@ class Controller(object):
         for hook in self.hooks:
             hook.pre_setup(step=None, level_number=None)
 
-        self.params = _Pars(controller_params)
+        self.params: _Pars = _Pars(controller_params)
 
         self.__setup_custom_logger(self.params.logger_level, self.params.log_to_file, self.params.fname)
-        self.logger = logging.getLogger('controller')
+        self.logger: logging.Logger = logging.getLogger('controller')
 
         if self.params.use_iteration_estimator and self.params.all_to_done:
             self.logger.warning('all_to_done and use_iteration_estimator set, will ignore all_to_done')
 
-        self.base_convergence_controllers = [CheckConvergence]
+        self.base_convergence_controllers: List[Type[Any]] = [CheckConvergence]
         self.setup_convergence_controllers(description)
 
     @staticmethod
-    def __setup_custom_logger(level=None, log_to_file=None, fname=None):
+    def __setup_custom_logger(
+        level: Optional[int] = None, log_to_file: Optional[bool] = None, fname: Optional[str] = None
+    ) -> None:
         """
         Helper function to set main parameters for the logging facility
 
@@ -91,7 +97,25 @@ class Controller(object):
             file_handler = None
 
         std_formatter = logging.Formatter(fmt='%(name)s - %(levelname)s: %(message)s')
-        std_handler = logging.StreamHandler(sys.stdout)
+
+        if level <= logging.DEBUG:
+            import warnings
+
+            warnings.warn('Running with debug output will degrade performance as all output is immediately flushed.')
+
+            class StreamFlushingHandler(logging.StreamHandler):
+                """
+                This will immediately flush any messages to the output.
+                """
+
+                def emit(self, record: logging.LogRecord) -> None:
+                    super().emit(record)
+                    self.flush()
+
+            std_handler = StreamFlushingHandler(sys.stdout)
+        else:
+            std_handler = logging.StreamHandler(sys.stdout)
+
         std_handler.setFormatter(std_formatter)
 
         # instantiate logger
@@ -108,7 +132,7 @@ class Controller(object):
         else:
             pass
 
-    def add_hook(self, hook):
+    def add_hook(self, hook: Type[Any]) -> None:
         """
         Add a hook to the controller which will be called in addition to all other hooks whenever something happens.
         The hook is only added if a hook of the same class is not already present.
@@ -122,7 +146,7 @@ class Controller(object):
         if hook not in [type(me) for me in self.hooks]:
             self.__hooks += [hook()]
 
-    def welcome_message(self):
+    def welcome_message(self) -> None:
         out = (
             "Welcome to the one and only, really very astonishing and 87.3% bug free"
             + "\n"
@@ -146,7 +170,7 @@ class Controller(object):
         )
         self.logger.info(out)
 
-    def dump_setup(self, step, controller_params, description):
+    def dump_setup(self, step: Any, controller_params: Dict[str, Any], description: Dict[str, Any]) -> None:
         """
         Helper function to dump the setup used for this controller
 
@@ -232,7 +256,7 @@ class Controller(object):
         out = 'Setup overview (--> user-defined, -> dependency) -- END\n'
         self.logger.info(out)
 
-    def run(self, u0, t0, Tend):
+    def run(self, u0: Any, t0: float, Tend: float) -> Any:
         """
         Abstract interface to the run() method
 
@@ -244,7 +268,7 @@ class Controller(object):
         raise NotImplementedError('ERROR: controller has to implement run(self, u0, t0, Tend)')
 
     @property
-    def hooks(self):
+    def hooks(self) -> List[Any]:
         """
         Getter for the hooks
 
@@ -253,7 +277,7 @@ class Controller(object):
         """
         return self.__hooks
 
-    def setup_convergence_controllers(self, description):
+    def setup_convergence_controllers(self, description: Dict[str, Any]) -> None:
         '''
         Setup variables needed for convergence controllers, notably a list containing all of them and a list containing
         their order. Also, we add the `CheckConvergence` convergence controller, which takes care of maximum iteration
@@ -265,8 +289,9 @@ class Controller(object):
         Returns:
             None
         '''
-        self.convergence_controllers = []
-        self.convergence_controller_order = []
+        self.convergence_controllers: List[Any] = []
+        # List of indices specifying the order of convergence controllers
+        self.convergence_controller_order: List[int] = []
         conv_classes = description.get('convergence_controllers', {})
 
         # instantiate the convergence controllers
@@ -275,7 +300,13 @@ class Controller(object):
 
         return None
 
-    def add_convergence_controller(self, convergence_controller, description, params=None, allow_double=False):
+    def add_convergence_controller(
+        self,
+        convergence_controller: Type[Any],
+        description: Dict[str, Any],
+        params: Optional[Dict[str, Any]] = None,
+        allow_double: bool = False,
+    ) -> None:
         '''
         Add an individual convergence controller to the list of convergence controllers and instantiate it.
         Afterwards, the order of the convergence controllers is updated.
@@ -302,7 +333,7 @@ class Controller(object):
 
         return None
 
-    def get_convergence_controllers_as_table(self, description):
+    def get_convergence_controllers_as_table(self, description: Dict[str, Any]) -> str:
         '''
         This function is for debugging purposes to keep track of the different convergence controllers and their order.
 
@@ -330,7 +361,7 @@ class Controller(object):
 
         return out
 
-    def return_stats(self):
+    def return_stats(self) -> Dict[Any, Any]:
         """
         Return the merged stats from all hooks
 
@@ -341,3 +372,71 @@ class Controller(object):
         for hook in self.hooks:
             stats = {**stats, **hook.return_stats()}
         return stats
+
+
+class ParaDiagController(Controller):
+
+    def __init__(
+        self,
+        controller_params: Dict[str, Any],
+        description: Dict[str, Any],
+        n_steps: int,
+        useMPI: Optional[bool] = None,
+    ) -> None:
+        """
+        Initialization routine for ParaDiag controllers
+
+        Args:
+           num_procs: number of parallel time steps (still serial, though), can be 1
+           controller_params: parameter set for the controller and the steps
+           description: all the parameters to set up the rest (levels, problems, transfer, ...)
+           n_steps (int): Number of parallel steps
+           alpha (float): alpha parameter for ParaDiag
+        """
+        from pySDC.implementations.sweeper_classes.ParaDiagSweepers import QDiagonalization
+
+        if QDiagonalization in description['sweeper_class'].__mro__:
+            description['sweeper_params']['ignore_ic'] = True
+            description['sweeper_params']['update_f_evals'] = False
+        else:
+            logging.getLogger('controller').warning(
+                f'Warning: Your sweeper class {description["sweeper_class"]} is not derived from {QDiagonalization}. You probably want to use another sweeper class.'
+            )
+
+        if controller_params.get('all_to_done', False):
+            raise NotImplementedError('ParaDiag only implemented with option `all_to_done=True`')
+        if 'alpha' not in controller_params.keys():
+            from pySDC.core.errors import ParameterError
+
+            raise ParameterError('Please supply alpha as a parameter to the ParaDiag controller!')
+        controller_params['average_jacobian'] = controller_params.get('average_jacobian', True)
+
+        controller_params['all_to_done'] = True
+        super().__init__(controller_params=controller_params, description=description, useMPI=useMPI)
+
+        self.n_steps: int = n_steps
+
+    def FFT_in_time(self, quantity: Any) -> None:
+        """
+        Compute weighted forward FFT in time. The weighting is determined by the alpha parameter in ParaDiag
+
+        Note: The implementation via matrix-vector multiplication may be inefficient and less stable compared to an FFT
+              with transposes!
+        """
+        if not hasattr(self, '__FFT_matrix'):
+            from pySDC.helpers.ParaDiagHelper import get_weighted_FFT_matrix
+
+            self.__FFT_matrix = get_weighted_FFT_matrix(self.n_steps, self.params.alpha)
+
+        self.apply_matrix(self.__FFT_matrix, quantity)
+
+    def iFFT_in_time(self, quantity: Any) -> None:
+        """
+        Compute weighted backward FFT in time. The weighting is determined by the alpha parameter in ParaDiag
+        """
+        if not hasattr(self, '__iFFT_matrix'):
+            from pySDC.helpers.ParaDiagHelper import get_weighted_iFFT_matrix
+
+            self.__iFFT_matrix = get_weighted_iFFT_matrix(self.n_steps, self.params.alpha)
+
+        self.apply_matrix(self.__iFFT_matrix, quantity)

@@ -3,6 +3,7 @@ import scipy.sparse as nsp
 
 from pySDC.core.problem import Problem, WorkCounter
 from pySDC.implementations.datatype_classes.mesh import mesh, imex_mesh
+from pySDC.helpers.fieldsIO import Scalar
 
 
 class testequation0d(Problem):
@@ -146,6 +147,15 @@ class testequation0d(Problem):
         me[:] = u_init * self.xp.exp((t - t_init) * self.lambdas)
         return me
 
+    def getOutputFile(self, fileName):
+        fOut = Scalar(np.complex128, fileName=fileName)
+        fOut.setHeader(self.lambdas.size)
+        fOut.initialize()
+        return fOut
+
+    def processSolutionForOutput(self, u):
+        return u.flatten()
+
 
 class test_equation_IMEX(Problem):
     dtype_f = imex_mesh
@@ -163,11 +173,8 @@ class test_equation_IMEX(Problem):
                 [[complex(re[i], im[j]) for i in range(len(re))] for j in range(len(im))]
             ).reshape((len(re) * len(im)))
         if lambdas_explicit is None:
-            re = self.xp.linspace(-30, 19, 50)
-            im = self.xp.linspace(-50, 49, 50)
-            lambdas_implicit = self.xp.array(
-                [[complex(re[i], im[j]) for i in range(len(re))] for j in range(len(im))]
-            ).reshape((len(re) * len(im)))
+            lambdas_explicit = lambdas_implicit.copy()
+
         lambdas_implicit = self.xp.asarray(lambdas_implicit)
         lambdas_explicit = self.xp.asarray(lambdas_explicit)
 

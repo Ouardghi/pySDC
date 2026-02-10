@@ -26,7 +26,6 @@ from pySDC.projects.Resilience.strategies import (
 from pySDC.helpers.plot_helper import setup_mpl, figsize_by_journal
 from pySDC.helpers.stats_helper import get_sorted
 
-
 cm = 1 / 2.5
 TEXTWIDTH = 11.9446244611 * cm
 JOURNAL = 'Springer_Numerical_Algorithms'
@@ -813,6 +812,7 @@ def plot_recovery_rate_per_acceptance_threshold(problem, target='resilience'):  
     else:
         fig, ax = plt.subplots(figsize=figsize_by_journal(JOURNAL, 0.8, 0.5))
 
+    ax.axvline(1.1, color='grey', ls=':', label='1.1')
     stats_analyser.plot_recovery_thresholds(thresh_range=np.logspace(-1, 4, 500), recoverable_only=False, ax=ax)
     ax.set_xscale('log')
     ax.set_ylim((-0.05, 1.05))

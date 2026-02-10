@@ -22,6 +22,7 @@ def parse_args():
     parser.add_argument('--restart_idx', type=int, help='Restart from file by index', default=0)
     parser.add_argument('--procs', type=str_to_procs, help='Processes in steps/sweeper/space', default='1/1/1')
     parser.add_argument('--res', type=int, help='Space resolution along first axis', default=-1)
+    parser.add_argument('--dt', type=float, help='(Starting) Step size', default=-1)
     parser.add_argument(
         '--logger_level', type=int, help='Logger level on the first rank in space and in the sweeper', default=15
     )
@@ -32,14 +33,17 @@ def parse_args():
 
 def run_experiment(args, config, **kwargs):
     import pickle
+    import os
 
     # from pySDC.implementations.controller_classes.controller_MPI import controller_MPI
     from pySDC.implementations.controller_classes.controller_nonMPI import controller_nonMPI
     from pySDC.helpers.stats_helper import filter_stats
 
     type(config).base_path = args['o']
+    os.makedirs(f'{args["o"]}/data', exist_ok=True)
+
     description = config.get_description(
-        useGPU=args['useGPU'], MPIsweeper=args['procs'][1] > 1, res=args['res'], **kwargs
+        useGPU=args['useGPU'], MPIsweeper=args['procs'][1] > 1, res=args['res'], dt=args['dt'], **kwargs
     )
     controller_params = config.get_controller_params(logger_level=args['logger_level'])
 
@@ -121,7 +125,7 @@ def plot_series(args, config):  # pragma: no cover
 
     idxs = np.linspace(0, config.num_frames * 0.9, 9, dtype=int)
 
-    for idx, ax in zip(idxs, axs.flatten()):
+    for idx, ax in zip(idxs, axs.flatten(), strict=True):
         try:
             _fig = config.plot(P=P, idx=idx, n_procs_list=args['procs'], ax=ax)
         except FileNotFoundError:
@@ -155,6 +159,7 @@ def make_video(args, config):  # pragma: no cover
     cmd = f'ffmpeg -i {path} -pix_fmt yuv420p -r 9 -s 2048:1536 -y {path_target}'.split()
 
     subprocess.run(cmd)
+    print(f'Made video {path_target!r}')
 
 
 if __name__ == '__main__':

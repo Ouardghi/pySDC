@@ -22,13 +22,20 @@ class SweeperMPI(Sweeper):
     `generic_implicit`.
     """
 
-    def __init__(self, params):
+    def __init__(self, params, level):
+        """
+        Initialization routine for the sweeper
+
+        Args:
+            params: parameters for the sweeper
+            level (pySDC.Level.level): the level that uses this sweeper
+        """
         self.logger = logging.getLogger('sweeper')
 
         if 'comm' not in params.keys():
             params['comm'] = MPI.COMM_WORLD
             self.logger.debug('Using MPI.COMM_WORLD for the communicator because none was supplied in the params.')
-        super().__init__(params)
+        super().__init__(params, level)
 
         if self.params.comm.size != self.coll.num_nodes:
             raise NotImplementedError(
@@ -201,9 +208,6 @@ class generic_implicit_MPI(SweeperMPI, generic_implicit):
 
         # only if the level has been touched before
         assert L.status.unlocked
-
-        # update the MIN-SR-FLEX preconditioner
-        self.updateVariableCoeffs(L.status.sweep)
 
         # gather all terms which are known already (e.g. from the previous iteration)
         # this corresponds to u0 + QF(u^k) - QdF(u^k) + tau
